@@ -1,0 +1,271 @@
+# HYPERVENTILATION - asm snippets
+
+All listings come from the unpacked `HYPER.EXE` (`re/mem_clean.bin`, linear == file offset; reproduce with `python3 re/ds.py ADDR N`).
+Code is Watcom C++ 32-bit (flat, PMODE/W). Addresses are the real ones; the immediates `0x12345678` are placeholders that the demo
+patches at run time (self-modifying code, see snippet 3).
+
+## 1. The inner loop of the textured, Z-buffered, per-channel-lit mapper (0x5a574)
+
+```
+5a574  shr ecx, 6                        ; ecx = interpolated 1/z (fixed point) -> 16-bit depth
+5a577  mov [0x21bdc4], ebx               ; spill u (16.16)
+5a57d  cmp cx, [esi+ebp*2]               ; 16-bit Z-buffer test, esi = zbuffer row, ebp = -pixels (counts up to 0)
+5a581  mov [0x21bdc8], edx               ; spill v (16.16)
+5a587  jae 0x5a603                       ; hidden -> skip the whole pixel
+5a589  shr ebx, 16                       ; u integer part
+5a58c  and edx, 0xff0000                 ; v integer part, already *65536 ...
+5a592  shr edx, 8                        ; ... -> v*256 : textures are hard-wired 256 texels wide
+5a595  and ebx, 0x12345678               ; u mask   (patched with the texture size - 1)
+5a59b  mov [0x21bc90], eax               ; spill the light accumulator
+5a5a0  xor eax, eax
+5a5a2  mov al, [ebx+edx+0x12345678]      ; texel (8-bit paletted); displacement = texture base (patched)
+5a5a9  mov dh, [0x21bc8a]                ; dh = red   light level (Gouraud, one byte per channel)
+5a5af  mov edi, [0x21bdd0]               ; destination row
+5a5b5  mov bh, [0x21bc92]                ; bh = blue  light level
+5a5bb  mov dl, [eax*4+0x12345678]        ; palette R  (palette apparently stored as interleaved byte tables - inferred from the 4-byte stride)
+5a5c2  mov bl, [eax*4+0x12345678]        ; palette B
+5a5c9  mov [esi+ebp*2], cx               ; Z-buffer write
+5a5cd  mov ch, [edx+0x149a18]            ; shade LUT: [light<<8 | colour] -> lit colour (no multiply)
+5a5d3  mov dl, [eax*4+0x12345678]        ; palette G
+5a5da  shl ecx, 8
+5a5dd  mov dh, [0x21bc8e]                ; green light level
+5a5e3  mov cl, [ebx+0x149a18]
+5a5e9  mov eax, [0x21bc90]
+5a5ee  mov ebx, [0x21bdc4]
+5a5f4  mov ch, [edx+0x149a18]
+5a5fa  mov edx, [0x21bdc8]
+5a600  mov [edi+ebp*4], ecx              ; one 32-bit pixel, 3 table lookups, 0 multiplies
+5a603  mov esi,[0x21bc88] ... add esi,0x12345678 ... add edi,0x12345678   ; step the three light levels / z (patched constants)
+5a64a  add ebx, esi                      ; u += du
+5a64c  add edx, edi                      ; v += dv
+5a655  jne 0x5a574                       ; loop, max 16 pixels
+```
+
+What is clever: the 8-bit palette is pre-split into byte tables and the lighting multiply is a 64 KB LUT at `0x149a18`
+(`[row*256+colour] = floor(colour*row/64)`, row = integer part of the interpolated light, 0..63; measured by dumping the table from the emulator), so Gouraud shading in true colour costs three dependent byte loads. Depth is 16 bit and compared with the
+same register that is used as `cx` for the store, so test+write share one instruction pair. The loop counter doubles as the
+destination index (`[edi+ebp*4]` with `ebp` negative and incrementing to zero).
+
+## 2. 16-pixel perspective sub-spans with the FPU divide hidden behind integer work (0x5a2c8..0x5a34b)
+
+```
+5a2c8  fild dword ptr [0x21bdc4]         ; x offset of the span start
+5a2ce  fld  dword ptr [0x21bd38]
+5a2d4  fld  qword ptr [0x10b920]
+5a2da  fmulp st(2)
+...                                      ; u/z, v/z, 1/z evaluated at the span start (plane equations)
+5a308  fld1
+5a30a  fdiv st(3)                        ; 1/(1/z) = z : ONE divide per span, issued here ...
+5a30c  shr ecx, 0x10                     ; ... while the integer unit continues with span set-up
+5a315  fld st(2) / fld st(2) / fmul st(2) ...
+5a321  fistp dword ptr [0x21bd74]        ; u, v of the span start as integers
+5a327  fistp dword ptr [0x21bd78]
+5a347  fld1
+5a349  fdiv st(3)                        ; second divide (span end) overlaps the next integer block
+```
+The affine inner loop of snippet 1 is entered with at most 16 pixels per call (`cmp ebp,0x10` at 0x5a408): the classic
+"perspective every 16 pixels" scheme. After the span the four `fstp [0x21bdc4]` at 0x5a459..0x5a46b drain the x87 stack.
+
+## 3. Self-modifying code: patching the mapper before a polygon (0x5b8fc, 0x5bd6b)
+
+```
+5bd6b  mov [0x5bd5f], edi        ; patch the imm32 of  "add eax, IMM"  (0x5bd5e) = per-pixel z step
+5bd71  mov [0x5bd23], ah         ; patch the shift/mask byte of the v extraction
+5bd77  add ebx, ecx
+5bd79  and eax, 0xff
+5bd7e  mov [0x5bd2a], eax        ; patch the u mask imm32 (and ebx, 0x12345678 at 0x5bd28)
+5bd83  mov [0x5bd3d], ebx        ; patch the texture-base displacement of  mov ecx,[ebx*4+0x12345678]
+5bd89  mov ebx, 0x5bd07          ; ebx = entry of this mapper variant (32-bit texel loop)
+5bd8e  jmp 0x5b8fc
+
+5b8fc  mov ecx, 0x5bb03          ; end of the common dispatch stub
+5b901  sub ebx, ecx              ; ebx = variant - stub_end  = a rel32 displacement
+5b903  mov [0x5baff], ebx        ; patch the rel32 of the jmp at 0x5bafe: the polygon driver now "jumps" into the variant
+```
+Every texture-mapper variant (8-bit palette, 32-bit texels, env/bump) has its own constants patched in place and the shared
+polygon walker (0x5a25d... 0x5b949, same structure twice) reaches the right inner loop through a patched jump displacement rather than a
+function pointer or a branch. The code object `0x1b000-0x70000` therefore has to be writable and the immediates are `0x12345678`
+in the on-disk image. Beware when snapshotting: take the image **before** the demo has run (see `re/unpack_clean.py`).
+
+## 4. The 70 Hz timer callback (0x1de94) - the whole demo clock
+
+```
+1de94  push esi
+1de95  mov eax,[0x10eb9c] ; inc dword [0x10eb9c]      ; global tick (3DS keyframe time!)
+1dea0  mov eax,[0x10eba0] ; inc dword [0x10eba0]      ; frame-pacing tick
+1deab  mov eax,[0x10eba4] ; inc dword [0x10eba4]      ; scene-local tick
+1deb6  mov esi,[0x10eb60]  ...  call dword ptr [edx+0x84]   ; raster object's per-tick virtual
+1dee1  call dword ptr [0x10ebb4]                       ; optional user hook
+```
+MIDAS calls it from its timer interrupt (`MIDASsetTimerCallbacks` at 0x1d436). Three counters because three consumers reset
+independently; 3DS keyframes are evaluated directly at `[0x10eb9c]`, i.e. **one 3DS frame = one 70 Hz tick** (verified: the camera object holds the
+position of keyframe time 693 at t = 10.0 s). This is why a port can make every frame a pure function of t.
+
+## 5. The main loop: wait for a tick, derive dt, run the script (0x1d56a..0x1d5eb)
+
+```
+1d56a  cmp edi, [0x10eba0]        ; spin until the ISR advanced the tick counter
+1d570  je 0x1d56a
+1d572  mov eax,[0x10eba0] ; sub eax, edi ; mov [0x149948], eax   ; integer dt (ticks)
+1d588  fild dword ptr [ebp-0x24]
+1d58b  fmul qword ptr [0x10124c]  ; * 1/70 (0.0142857...)
+1d591  fstp dword ptr [0x149944]  ; float dt in seconds, used by all particle/fade code
+1d5b1  call dword ptr [0x10ebb8]  ; current scene's render callback (or the default one at 0x1d904)
+1d5b7  mov eax,[0x10eb78] ; shl eax,6 ; add edx,[0x10eb80]       ; position = order*64 + row from MIDASgetPlayStatus
+1d5e7  cmp edx, ebx ; jg 0x1d63f ; ... jmp [edx*4+0x1d024]       ; fire every script record whose order*64+row has been reached
+```
+The *music* drives the script (order,row), the *timer* drives animation. A frame can therefore fire several events.
+
+## 6. The script is a table of 28-byte records (0x104aa0) and a jump table
+
+```
+record: { order, row, type, func, a, b, c }     e.g. 17 16 type=1 func=0x1e210 a=64   (a beat "pulse")
+                                                      5  0 type=3 func=0x222c4 a=13 b=14 c=-20
+1d5fa  cmp edx, 3 ; ja 0x1d95f                   ; 0x1d95f = "error in script!"
+1d603  jmp dword ptr [edx*4+0x1d024]             ; type 0: f() 1: f(a) 2: f(a,b) 3: f(a,b,c)
+222d1  dec ecx ; cmp ecx, 0xc ; ja 0x226a9 ; jmp dword ptr [ecx*4+0x22290]   ; 0x222c4: sprite/fader command switch (13 cases)
+```
+The 168 records (decoded in `web/assets/script.json`, tool `tools/script_dump.py`) are the whole direction of the demo: scene start/stop
+functions (type 0), beat pulses (type 1) and sprite commands: 1 = start sprite, 2 = stop, 4 = fade in, 5 = fade out,
+6 = fade to colour, 7 = flash colour, 8 = cancel.
+
+## 7. x87 precision control used as an optimisation (0x1d10f, 0x20cee)
+
+```
+1d10f  fnstcw word ptr [esp]
+1d112  and word ptr [esp], 0xfcff      ; PC = 00 -> 24-bit mantissa (single precision) for the whole demo
+1d118  fldcw word ptr [esp]
+...
+20cee  fnstcw [esp] ; or word ptr [esp], 0x300 ; fldcw [esp]     ; 0x20cec: precision back to 64-bit for the matrix code
+```
+On a Pentium `fdiv` is ~19 cycles at 24-bit precision vs ~39 at 64-bit; the demo runs the rasteriser in single precision and switches back to extended only
+around the 3D matrix concatenation at 0x202a4 (a matrix product written out as straight-line `fld/fmul/fxch` code).
+
+## 8. Struct-by-value copy and 4x3 matrix product (0x202cd..0x20351)
+
+```
+202cd  mov eax,[edx+8]   ; mov [ebp-0x1f0],eax
+202d6  mov eax,[edx+0x14]; mov [ebp-0x1ec],eax     ; the 3x4 camera/object matrix is transposed while it is copied into the frame
+...
+20351  fld dword ptr [esi]  ; fmul dword ptr [eax] ; fld [esi+4] ; fmul [eax+4] ; fld [esi+0xc] ; fmul [eax] ...
+```
+(the interleaved loads show the Watcom scheduler pairing `fld` with `fmul` to keep the Pentium FPU pipeline busy).
+
+## 9. Why the shade LUT and 16-bit Z? Notes on the data side
+* Textures are 8-bit PNG decoded once (zlib `inflate 1.0.4` is linked in). The `[eax*4+table]` stride of 4 suggests per-channel byte tables per palette entry (inference, not fully traced).
+* The Z-buffer is 16 bit wide (`[esi+ebp*2]`), the frame buffer 32 bit (`[edi+ebp*4]`) in the 320x240x32 mode; 15/16/24 bit modes use other variants of the same loops.
+* The DOS/PMODE/W details: the extender's `lsl` of DS is used as the initial heap break (0x52d1e) - an emulator must give a sensible DS limit.
+
+
+## 10. The per-vertex lighter: smooth-step fall-off and a table-driven 1/sqrt (0x4672b..0x46a06, called through 0x463ec)
+
+Everything the port needed to light the 3DS scenes like the original is in one 600-byte function. For each lit face it lights the three vertices that have not been lit this frame
+(vertex flag bit 2 marks them), looping over the object's light list (a linked list at `[scene+0x16c]`, linked through `[light+0x9c]`):
+
+```
+46766  mov eax,[esi+0x8c] / fld [0x103664] (=2.0) / fadd [eax+0xa4] ... fstp [vtx+0x30]   ; colour = scene ambient (+2.0) per channel
+467a7  fld [light+0xac] / fsub [vtx+4] ...                      ; D = light position - vertex position
+467ce  fld D.x / fmul [vtx+0x40] ... faddp ...                  ; dot = D . N   (vertex normal at +0x40)
+467eb  fldz / fcomp dot / jb 0x468c1                            ; light is behind the surface: next light
+468c1  D.x^2 + D.y^2 + D.z^2 -> d2 ; fcomp [light+0xd4] / ja next   ; d2 > outer^2: out of range
+468ea  fcomp [light+0xd0] / jbe 469a4                           ; d2 <= inner^2: factor 1.0
+468fd  t = (outer2 - d2) / (outer2 - inner2)                    ; fld [d4] / fsub [d0] / fld [d4] / fsub d2 / fdivrp
+4690f  s = (3.0 - 2.0*t) * t * t                                ; fmul [0x10366c]=2.0 / fsubr [0x10367c]=3.0 / fmul st(0) / fmulp : smooth-step
+46941  eax = 2*bits(d2) - 0x7f000000 ; and eax,0xfe000000 ; neg ; sar eax,2 ; add eax,0x3f800000   ; fast 1/sqrt, step 1: exponent
+4695e  ebx = (bits(d2) & 0xfff000) >> 12 ; add eax,[ebx*4+0x145140] ; and eax,0x7fffffff            ; step 2: 4096-entry mantissa correction
+46973  fmul dword [esp+0x30]  ...  colour += s * mult * dot * (1/|D|) * light.rgb                      ; cos(angle) = dot/|D|
+```
+
+Three things are worth stealing:
+
+* **The fall-off is `3t^2 - 2t^3` between an inner and an outer range**, both stored *squared* (`[light+0xd0]`, `[light+0xd4]`: the constructor 0x45c78 does `fld range / fmul st(0) / fstp`), so
+  no square root is needed for the range test; 3DS's inner/outer range chunks (0x4659/0x465A) map straight to it.
+* **1/sqrt(d2) is done with integer arithmetic on the float's bit pattern**: `2*bits - 0x7f000000` halves and negates the exponent (the `and 0xfe000000` clears the lost bit, `neg`+`sar 2` produce `-(e/2)`),
+  and the top 12 bits of the mantissa (which include the exponent's parity bit) index a 4096-entry table of corrections (`0x145140`) that I dumped: the result is within 2.4e-4 of the true value.
+  It replaces a `fsqrt`+`fdiv` (about 70 cycles on a Pentium) with ~10 cycles of integer code.
+* The light's contribution is *per channel* and the sum is clamped at **250.0** (`cmp ... 0x437a0000`), then multiplied by **16384.0** (`[0x103674]`): the vertex colour is a float that is already a 16.16 fixed
+  number whose integer part is `light/4`; the rasteriser's per-channel accumulators (snippet 1) walk that value and index the shade LUT with its integer part. Net effect: `lit = texel * floor(min(L,250)/4) / 64`.
+  Fog is the same code: if `[0x1499e8]` is set the three channels are also multiplied by `clamp(1 - z*[0x1499ec], 0, 1)` (z = camera depth) just before the 16.16 conversion.
+
+The function is also instructive by what it does *not* have: no spot lights, no specular, no per-pixel work, no attenuation curve other than the smooth-step. A scene with 24 lights is cheap because each object keeps
+a short list (0x462c8 transforms every light into the object's space and keeps those with `distance - bounding_radius < outer range`, with a square root from the same bit trick).
+
+
+## 11. The "tunnel" is a 41x26 distortion grid, not a polar tunnel (0x23350, constants dumped from the emulator)
+
+The lava and swirl "tunnels" (30-44 s, 128-144 s) use no polar mapping at all. Every frame the code builds a grid of 41x26 vertices (one every 8 pixels) and hands the grid to the textured-quad renderer:
+
+```
+2335d  fild [0x10eb9c] (scene tick) / fadd phaseX[k] / fld freqX[k] / fmul pi / fmulp / fcos / fmul 150.0 / fadd 160.0 / fstp cx[k]    ; 3 attractors, cosines of the tick
+23422  dx = px - cx ; dy = py - cy ; r2 = dx*dx + dy*dy + 500.0 ; inv = 1/r2                      ; fld1 / fdiv st(3)
+2342e  U += dx*str[k]*inv ; V += dy*str[k]*inv                                                  ; str = +6.7e8, -3.4e8, +1.7e8  (a 1/r "lens")
+2344c  f = (r2 + 5000.0) * (1/15000) ; if (f < 1.0) shade *= f                                  ; dark core around every attractor
+2346d  u = (524288*i + U) << 8 ; v = (524288*j + V) << 8 ; shade_fixed = shade_float << 8       ; 524288 = 8 px in 16.16
+```
+
+Each vertex therefore carries a texture coordinate equal to its own pixel position plus `str*(dx,dy)/(r^2+500)/65536` texels, i.e. the texture is pushed radially around three moving points: a 1/r lens that looks like
+a tunnel with three vanishing points, for 41*26*3 = 3200 divisions per frame instead of 64000 pixel lookups through a polar table. The shade (0..63.99, initialised from the float constant `0x4a7ffffc`) darkens the lens cores
+through the shade LUT of snippet 1. Everything is derived from one integer, the scene tick `[0x10eb9c]`, which the scene constructor resets to 0 (reset times measured: 30.1, 44.3, 58.2, 72.4, 83.1, 100.7, 114.9, 128.6, 132.9, 136.9,
+140.0, 143.8, 147.3, 157.9, 172.0 s: the swirl is four sub-scenes with their own textures). The port reproduces it with a bilinear fill of each 8x8 cell and matches the original's structure closely (frame error at 33 s: 8/255);
+the original's output is darker and more saturated than texture x shade (histogram match: `out ~ c^1.45` per channel), which the port applies as an empirical gamma.
+
+
+## 12. Metaballs: field sampler and marching cubes (0x24698, 0x3697c, 0x377fc)
+
+The sampler (a callback stored in the iso object at `[obj+0x188]`) advances five balls and fills a 17^3 float grid. Each ball keeps three 10-bit phases (`[0x13192c+4i]`, `[0x131954+4i]`, `[0x13197c+4i]`):
+```
+24706  mov eax,[ecx+0x106568]     ; speed A
+2470c  imul eax,edx              ; * dt ([0x149948] = ticks since last frame)
+24711  add eax,[ecx+0x13192c]
+24717  and eax,esi              ; esi = 0x3ff
+```
+then `pos = 0.4*ext*(sin(a1*pi/512), cos(a2*pi/512), sin(a3*pi/512))` (fsin/fcos at 0x247a4/0x247bd). Per grid point the loop at 0x2494c evaluates, for each ball with `r2 < 0.999*R2`,
+`1 - a*r2^3 + b*r2^2 - c*r2` with `a=4/(9R2^3)`, `b=17/(9R2^2)`, `c=22/(9R2)` (the constants 9, 4, 17, 22 live at 0x101c0d..0x101c25): the classic Wyvill/Brown/Wyvill polynomial in the squared distance.
+
+The mesher 0x3697c walks the 16^3 cells, builds an 8-bit corner mask (`corner < iso` -> bit k, offsets 289,290,1,0,306,307,18,17 in grid units), looks up the 12-bit edge mask at `0x108d20` (dwords) and
+the triangle list at `0x109120` (16 bytes per case, 0xff terminated), and creates edge vertices on demand (cache flags per grid point, so vertices are shared) with the routine at 0x377fc:
+`t=(iso-f0)/(f1-f0); p=p0+t*(p1-p0)`, normal = lerp of the forward-difference gradients scaled by `[obj+0x1d0]`(=1/90), renormalised with the table-driven 1/sqrt, `u=4+4*atan2(z,x)/pi`
+(`fpatan` at 0x34d8c). Faces are 0x38-byte records pointing at the three vertices (reversed order).
+
+
+## 13. The texture + environment (+bump) mappers: they average, they do not add (0x5e77c / 0x5ec1c, 0x5f5b6)
+
+The perspective-correct span mappers (a 16-pixel subdivision loop, inner loop patched in place) come in variants. The texture+environment one (inner loop 0x5ec1c..0x5ecdc) fetches *two* 8-bit texels
+and averages their palette colours:
+```
+5ec5a  mov al,[eax+ebx+tex]        ; texture index at (u,v)
+5ec63  mov bl,[ecx+edx+env]        ; environment index at (eu,ev)
+5ec7b  mov eax,[eax*4+pal_tex]     ; 32-bit palette colours (already lit)
+5ec82  mov ebx,[ebx*4+pal_env]
+5ec89  and eax,0xfefefe ; and ebx,0xfefefe
+5ec94  add ebx,eax ; shr ebx,1     ; (tex+env)/2
+```
+with a 16-bit z test (`cmp si,[edi+ebp*2]`) in front. The bump variant (0x5f5b6) uses the same texel index for the texture and for a 16-bit *bump word table* `[idx*2]`; its two bytes
+are added to the interpolated environment coordinates (`add al,dl / add ah,dh`) before the environment fetch, then the same average. The bump table is built once by the bitmap loader 0x4a208:
+`dU = clamp(h(x-1,y)-h(x+1,y), -128, 127)`, `dV = clamp(h(x,y-1)-h(x,y+1), -128, 127)` (wrapping neighbours), i.e. the offsets are in environment-map texels.
+`engine.js` now does the same (the old port added the environment colour and scaled a forward difference by 0.02).
+
+
+## 14. Second iso scene: sampler 0x23ac0, particle emitter 0x23d48, particle blit 0x53563
+
+```
+23af7  fld [ebx+0x1064a0]      ; per-ball speed (float, per frame)
+23afd  fadd [ecx+0x131790]     ; y += speed
+23b09  cmp [ecx+0x131790],0x447a0000 ; >= 1000.0 -> wrap to -1000 and re-roll x,z with rand()%400
+```
+The shade table has a second half: rows 0..63 are `c*r/64`, rows 64..127 are `min(255, c*(r-64)/32)` (dumped from 0x149a18). The additive particle blit (0x5360f..0x5365e) reads
+`row = tint>>2` per channel, adds `T[64+row][texel]` to the destination with saturation, and skips texel 0.
+The particle update (0x2406c): `v += (g+a)*dt; pos += v*dt + (g+a)*dt^2/2; size *= 1.02^dt` (g = [0x149904] = (0,-1,0), the damping at [0x1498f4] is 0).
+
+
+## 15. Two-layer swirl scene (132.74-136.71 s): grid 0x21c24, cell filler 0x34db4, blend 0x351ef - pixel-exact
+
+Every number below was verified against the emulator: the 41x26 vertex arrays at 0x127db4/0x129f04/0x126d08 (tick 147), the two 8-bit layer surfaces and the final 32-bit buffer (0 differing pixels).
+* Vertex (x,y = cell offset from the screen centre +0.5, t = scene tick): `ang = atan2(x,y)` (the helper 0x34d81 is `fxch; fpatan`), `D = 1.5 cos(2 ang + .04 t) + sin(3 ang + .1 t) + 2.5`; layer 1 coordinates
+  `5 (x c - y s) D`, `5 (x s + y c) D` with `c,s = cos/sin(.02 t)`; layer 2 `6 cos(.03 t + 3 ang) r` and `3 (4 r sin(.3 r + .07 t) + .01 t D)` where **r is the table-driven sqrt** (0x21d80..0x21da6: `2*bits - 0x7f000000 >> 2`, table 0x141140: the same trick as the lighter's 1/sqrt but without the `neg`); shade `clamp(1..63, (.2(sin(.03t+.1x)+1) + .2(cos(.07t+.2y)+1)) (20(5-D)+40))`.
+  Stored as `round(v*65536)<<8` (so the texture coordinate is the byte at bits 24..31), the shade array is written one element late (`add ebx,4` before the store: element 0 overlaps the pointer variable 0x126d08).
+* Cell filler 0x34db4: per 8x8 cell the four corner values are interpolated in int32: `dL = (BL-TL)>>3`, per scanline k = 1..8 `L += dL, R += dR`, `step = (R-L)>>19`, start `L>>>16`, texel index `((v>>8)&255)<<8 | (u>>8)&255`.
+* Blend 0x351ef: the shade array is interpolated the same way (row = bits 8..15 of the 16-bit accumulator), `pixel = T1[row][texel1] + T2[row][texel2]` with `T[r][i] = (palette*r)>>7` per channel (two halved layers added without saturation).
+
+## 16. Asset note: PNG colour management
+60 of the 95 PNG assets carry gAMA+cHRM chunks, so browsers colour-converted their palettes while the original uses them raw. The chunks are stripped from the assets (this alone took the mean error from 30.4 to 27.7 and made the empirical tunnel gamma unnecessary).
