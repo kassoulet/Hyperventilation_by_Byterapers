@@ -269,3 +269,18 @@ Every number below was verified against the emulator: the 41x26 vertex arrays at
 
 ## 16. Asset note: PNG colour management
 60 of the 95 PNG assets carry gAMA+cHRM chunks, so browsers colour-converted their palettes while the original uses them raw. The chunks are stripped from the assets (this alone took the mean error from 30.4 to 27.7 and made the empirical tunnel gamma unnecessary).
+
+## 17. Halftone scene (136.9-139.8 s): init 0x25c9c, render 0x25d80, mask table 0x25b60 - pixel-exact background
+
+Same 41x26 vertex grid and cell filler (0x34db4) as section 15, with two layers (`mefis` = layer A at [0x137de4], `forcemao` = layer B at [0x137de8]; note the assignment is the reverse of the init order one would guess). Per vertex (x in -20..20, y in -13..12, t = scene tick, r = sqrt(x^2+y^2), P = r*r):
+
+    A1 = x*(2 sin(.00034 P)+10)          B1 = y*(cos(.0013 P)+5)
+    th = .6 sin(.7 r+.022 t) + .5 sin(.3 r+.116 t)
+    U1 = cos(th) A1 - sin(th) B1 - 256 cos(.006 t)      V1 = cos(th) (A1 - B1) - 256 sin(.007 t)   (sic: cos twice, the original's bug)
+    A2 = x*(sin(.001 r x)+6)             B2 = y*(2 cos(.002 r y)+14)
+    ph = .3 sin(.3 r+.003 t) + .64 sin(.3 r+.004 t) + .07 t
+    U2 = cos(ph) A2 + sin(ph) B2 + 256 sin(.003 t)      V2 = -sin(ph) A2 + cos(ph) B2 + 256 sin(.005 t)
+
+stored as trunc(v*65536)<<8 (int32 wrap). **The x87 is in single precision with chop rounding** (control word PC=24 bits, RC=truncate): every + - * / sqrt result is truncated to a float32, sin/cos are not. Emulating that (`c()` in `scenes.js`) makes 92% of the vertices bit-exact, the rest differ by under 1e-4 texel; with round-to-nearest doubles nearly all of them were off by a few 1/65536.
+
+Blending is per 8x8 block: v = trunc(63 L/(a^2+b^2+L)) & 63 with L = 15000 cos(.034 t+3.0159)+17000, a = 100 cos(.11 t)+x-160, b = 90 sin(.093 t)+y-100 (x,y = the block's top-left pixel). The table at [0x137df0] holds 32 discs of radius (32-e)*.17 (distance from (4,4) to the pixel centre) followed by their 32 inverses; entry v selects, per pixel, layer A's palette (0) or layer B's (1). Verified against the emulator at 138.0 s: layers and mask table 100%, composite exact except under the lyric sprites.

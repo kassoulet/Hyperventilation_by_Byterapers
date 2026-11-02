@@ -152,6 +152,9 @@ Textures: see the contact sheet `shots/` and `web/assets/img`.
 and several scene-specific effects (tunnel, metaballs, flesh tube) are only approximations.
 
 
+### Halftone scene (136.9-139.8 s) - fully reversed
+Two 41x26 vertex layers (`mefis`, `forcemao`) mixed per 8x8 block through a growing/shrinking disc mask: the dotted look. Formulas and the single-precision-chop x87 finding are in WRITEUP-asm.md section 17; the background matches the emulator exactly.
+
 ### Swirl scene (132.9-136.9 s) - fully reversed
 A 41x26 distortion grid (code 0x21c24) rendered twice (textures `mulju00a` and `mulju00b`, indices + palettes straight from the PNGs) and blended through shade tables: see asm section 15. The port reproduces the original's integer pipeline
 (grid in 16.16<<8, 8x8 cell interpolation, row tables) and matches the emulator's final 32-bit buffer exactly. The other sub-scenes of 128.6-143.8 s are *different code*: 136.9-139.8 is the scene initialised at 0x25c9c (render 0x25d80, textures `forcemao` + `mefis`),

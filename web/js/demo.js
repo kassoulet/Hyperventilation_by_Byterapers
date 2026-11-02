@@ -69,7 +69,7 @@ export class Demo{
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
       if(w>=320&&h>=200){x0=0;y0=VY;}
-      else{x0=spr.x>=0?Math.round(spr.x-w/2):Math.round((320-w)/2);y0=spr.y>=0?Math.round(spr.y-h/2):Math.round(VY+(VH-h)/2);}
+      else{x0=spr.x>=0?Math.round(spr.x-w/2):Math.round((320-w)/2);y0=spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?VY:Math.round(VY+(VH-h)/2);}   // y=-1: top of the viewport (thelove.png matched at y0=VY, x0=-1), y=-2: centred
       const fb=R.fb,d=tex.d;
       for(let y=0;y<h;y++){const yy=y0+y;if(yy<VY||yy>=VY+VH)continue;
         for(let x=0;x<w;x++){const xx=x0+x;if(xx<0||xx>=W)continue;const px=d[y*w+x],o=yy*W+xx,p=fb[o];

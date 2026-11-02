@@ -102,11 +102,11 @@ function swirlGrids(t){
   return {g1,g2,sh};
 }
 // render both layers of the grid into 8-bit surfaces exactly as 0x34db4 does, then blend through the row tables
+const palOf=(ti,tc)=>{const P=new Int32Array(256*3);for(let i=0;i<ti.d.length;i++){const k=ti.d[i]&255;P[k*3]=tc.d[i]&255;P[k*3+1]=(tc.d[i]>>8)&255;P[k*3+2]=(tc.d[i]>>16)&255;}return P;};
 function swirl2(d,R,t){
   const T=Math.floor(t*70),G=swirlGrids(T),{g1,g2,sh}=G,NX=41,tx1=d.tex['mulju00aidx'],tx2=d.tex['mulju00bidx'],p1=d.tex['mulju00a'],p2=d.tex['mulju00b'];
   if(!tx1||!tx2)return;
-  const pal=(ti,tc)=>{const P=new Int32Array(256*3);for(let i=0;i<ti.d.length;i++){const k=ti.d[i]&255;P[k*3]=tc.d[i]&255;P[k*3+1]=(tc.d[i]>>8)&255;P[k*3+2]=(tc.d[i]>>16)&255;}return P;};
-  const P1=d.swp1||(d.swp1=pal(tx1,p1)),P2=d.swp2||(d.swp2=pal(tx2,p2));
+  const P1=d.swp1||(d.swp1=palOf(tx1,p1)),P2=d.swp2||(d.swp2=palOf(tx2,p2));
   const fb=R.fb,i1=tx1.d,i2=tx2.d;
   for(let j=0;j<25;j++)for(let i=0;i<40;i++){
     const a=(j*NX+i)*2,b=a+2,c=a+NX*2,e=c+2,s0=j*NX+i;
@@ -125,6 +125,52 @@ function swirl2(d,R,t){
         fb[o]=0xff000000|((bl&255)<<16)|((g&255)<<8)|(r&255);
         cu1+=su1;cv1+=sv1;cu2+=su2;cv2+=sv2;cs+=ss;}
     }}
+}
+// ---- halftone swirl scene (136.9-139.8 s; init 0x25c9c, render 0x25d80): two 41x26 layers (mefis / forcemao, filled by the same cell filler 0x34db4 as the swirl) are
+// mixed per 8x8 block through a circular mask (table at [0x137df0], 32 growing discs + their inverses); the block's disc index is 63*L/(a^2+b^2+L) with (a,b) the pixel's offset from a moving centre.
+// The demo runs the x87 in single precision with chop rounding (every + - * / sqrt result is truncated to 24 bits; sin/cos are not) - c() reproduces it (about 92% of the vertices bit-exact, the rest differ by < 1e-4 texel).
+const _f32=new Float32Array(1),_i32=new Int32Array(_f32.buffer);
+function c(v){_f32[0]=v;const f=_f32[0];if(Math.abs(f)>Math.abs(v)){_i32[0]--;return _f32[0];}return f;}
+function forceGrids(t){
+  const NX=41,NY=26,g1=new Int32Array(NX*NY*2),g2=new Int32Array(NX*NY*2),T=k=>c(t*k),sin=Math.sin,cos=Math.cos;
+  for(let row=0;row<NY;row++)for(let col=0;col<NX;col++){
+    const x=col-20,y=row-13,k=(row*NX+col)*2,r=c(Math.sqrt(x*x+y*y)),P=c(r*r);
+    const S1=c(c(sin(c(P*0.00034))*2)+10),Cc=c(cos(c(P*0.0013))+5),A1=c(x*S1),B1=c(Cc*y);
+    const sn=c(sin(c(c(r*0.3)+T(0.116)))*0.5),th=c(c(sin(c(c(r*0.7)+T(0.022)))*0.6)+sn),ct=cos(th),st=sin(th);
+    g1[k]=c(c(c(ct*A1)-c(st*B1))-c(cos(T(0.006))*256))*65536*256|0;g1[k+1]=c(c(c(ct*A1)-c(ct*B1))-c(sin(T(0.007))*256))*65536*256|0;
+    const Sx=c(sin(c(c(r*x)*0.001))+6),Cy=c(c(cos(c(c(r*y)*0.002))*2)+14),A2=c(x*Sx),B2=c(Cy*y);
+    const ph=c(c(sin(c(c(r*0.3)+T(0.003)))*0.3)+c(c(sin(c(c(r*0.3)+T(0.004)))*0.64)+T(0.07))),c2=cos(-ph),s2=sin(-ph);
+    g2[k]=c(c(c(c2*A2)-c(s2*B2))+c(sin(T(0.003))*256))*65536*256|0;g2[k+1]=c(c(c(s2*A2)+c(c2*B2))+c(sin(T(0.005))*256))*65536*256|0;}
+  return {g1,g2};
+}
+// cell filler 0x34db4 into an 8-bit 320x200 surface (same integer pipeline as the swirl scene)
+function fillLayer(g,idx,out){
+  const NX=41;
+  for(let j=0;j<25;j++)for(let i=0;i<40;i++){
+    const a=(j*NX+i)*2,b=a+2,cc=a+NX*2,e=cc+2,dLu=I32(g[cc]-g[a])>>3,dLv=I32(g[cc+1]-g[a+1])>>3,dRu=I32(g[e]-g[b])>>3,dRv=I32(g[e+1]-g[b+1])>>3;
+    let Lu=g[a],Lv=g[a+1],Ru=g[b],Rv=g[b+1];
+    for(let k=0;k<8;k++){
+      Lu=I32(Lu+dLu);Lv=I32(Lv+dLv);Ru=I32(Ru+dRu);Rv=I32(Rv+dRv);
+      const su=I32(Ru-Lu)>>19,sv=I32(Rv-Lv)>>19;let cu=Lu>>>16,cv=Lv>>>16,o=(j*8+k)*320+i*8;
+      for(let x=0;x<8;x++,o++){out[o]=idx[(((cv>>8)&255)<<8)|((cu>>8)&255)]&255;cu+=su;cv+=sv;}
+    }}
+}
+let _fmask=null;
+function force(d,R,t){
+  const T=Math.floor(t*70),tx1=d.tex['mefisidx'],tx2=d.tex['forcemaoidx'];
+  if(!tx1||!tx2)return;
+  const P1=d.fp1||(d.fp1=palOf(tx1,d.tex['mefis'])),P2=d.fp2||(d.fp2=palOf(tx2,d.tex['forcemao']));
+  if(!_fmask){_fmask=new Uint8Array(4096);
+    for(let e=0;e<32;e++){const rad=c(c(c((32-e)*0.03125)*8)*0.68);
+      for(let y=0;y<8;y++)for(let x=0;x<8;x++){const inside=Math.sqrt((4-(y+.5))**2+(4-(x+.5))**2)<rad?1:0;_fmask[e*64+y*8+x]=inside;_fmask[2048+e*64+y*8+x]=1-inside;}}}
+  if(!d.fA){d.fA=new Uint8Array(64000);d.fB=new Uint8Array(64000);}
+  const G=forceGrids(T);fillLayer(G.g1,tx1.d,d.fA);fillLayer(G.g2,tx2.d,d.fB);
+  const L=c(c(Math.cos(c(c(T*0.034)+3.0159289474462017))*15000)+17000),fb=R.fb;
+  for(let j=0;j<25;j++)for(let i=0;i<40;i++){
+    const a=c(c(Math.cos(c(T*0.11))*100)+c(i*8-160)),b=c(c(Math.sin(c(T*0.093))*90)+c(j*8-100)),F=c(L/c(c(c(a*a)+c(b*b))+L)),m=(c(F*63)&63)*64;
+    for(let y=0;y<8;y++)for(let x=0;x<8;x++){
+      const o=(j*8+y)*320+i*8+x,sel=_fmask[m+y*8+x],P=sel?P2:P1,k=(sel?d.fB:d.fA)[o]*3;
+      fb[(VY+j*8+y)*W+i*8+x]=0xff000000|(P[k+2]<<16)|(P[k+1]<<8)|P[k];}}
 }
 // ---- iso-surface scene #2 (172-185.8 s): callbacks 0x23814 (init), 0x239bc (render), 0x23ac0 (sampler); textures metamap0 / metaenv0 / bump.png
 // 10 balls rise/fall along y by a per-frame speed and re-enter at +-1000 with a new random (x,z) (rand() = Watcom LCG, srand(time()) in the original -> the sequence below is just one valid one).
@@ -201,9 +247,9 @@ export const SCENES=[
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt);}},
  {name:'photos',t0:114.9,t1:128.6,render(d,R,lt,t){}},
- {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','forcemap','forcemao','metamap0'],
+ {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0'],
   // four sub-scenes (the original's scene tick restarts at 128.6, 132.9, 136.9 and 140.0 s); textures chosen by colour (the original recolours them with palettes; sub-scene 2's hue is approximate)
-  render(d,R,lt,t){if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
+  render(d,R,lt,t){if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
     tunnel(d,R,d.tex[SUB[k][1]],(t-SUB[k][0])*TICK);}},
  {name:'balls',t0:143.8,t1:157.8,tex:['raita','ball','ballmid'],
   render(d,R,lt,t){blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
