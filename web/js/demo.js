@@ -2,7 +2,7 @@
 import {parse3DS} from './s3ds.js';
 import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engine.js';
 import {SCENES,autoMats} from './scenes.js';
-
+const XL=0;
 export class Demo{
   constructor(){this.R=new Raster();this.tex={};this.sc3={};this._m={};this.script=null;this.xm=null;this.t=0;this.cv=document.createElement('canvas');this.cv.width=W;this.cv.height=H;this.ctx=this.cv.getContext('2d');this.img=this.ctx.createImageData(W,H);this.u32=new Uint32Array(this.img.data.buffer);}
   async load(progress){
@@ -69,7 +69,8 @@ export class Demo{
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
       if(w>=320&&h>=200){x0=0;y0=VY;}
-      else{x0=spr.x>=0?Math.round(spr.x-w/2):Math.round((320-w)/2);y0=spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?VY:Math.round(VY+(VH-h)/2);}   // y=-1: top of the viewport (thelove.png matched at y0=VY, x0=-1), y=-2: centred
+      else{ // 0x22145: a coordinate of -1 / -2 means left|top / right|bottom edge of the 320x200 viewport (centre = w/2 or 320-w/2, 200-h/2)
+        x0=spr.x>=0?Math.round(spr.x-w/2):spr.x===-1?XL:320-w;y0=VY+(spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?0:200-h);}
       const fb=R.fb,d=tex.d;
       for(let y=0;y<h;y++){const yy=y0+y;if(yy<VY||yy>=VY+VH)continue;
         for(let x=0;x<w;x++){const xx=x0+x;if(xx<0||xx>=W)continue;const px=d[y*w+x],o=yy*W+xx,p=fb[o];
