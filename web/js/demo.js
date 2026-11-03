@@ -1,7 +1,7 @@
 // demo.js - the whole demo as a pure function of time:  renderAt(t)  (t = seconds of music, 0..~190)
 import {parse3DS} from './s3ds.js';
 import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engine.js';
-import {SCENES,autoMats} from './scenes.js';
+import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;
 const FD=0.19;   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
@@ -17,6 +17,7 @@ export class Demo{
     this.isoballs=await (await fetch(base+'isoballs.json')).json();
     this.mc=await (await fetch(base+'mc.json')).json();   // marching-cubes triangle table of the original (0x109120)
     this.lanim=await (await fetch(base+'lightanim.json')).json();   // animated light ranges sampled from the original
+    setPSeeds(await (await fetch(base+'pseeds.json')).json());
     initHole(await (await fetch(base+'holefx.json')).json());
     this.lrec=await (await fetch(base+'lights.json')).json();   // the lighter's light list (colour, position, inner^2, outer^2, multiplier) per frame, from the emulator
     this.flares=await (await fetch(base+'flares.json')).json();   // lights flagged for lens flares, per call of the original's 0x31180 (see WRITEUP-asm.md 24)

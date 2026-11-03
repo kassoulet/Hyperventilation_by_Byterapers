@@ -18,7 +18,8 @@ export function autoMats(d,sc,over){
 // A particle is drawn (additive, texel*(c>>2)>>5 per channel) only while z <= 160*size, as a square of 2*size*160/z pixels. The RNG is the C library LCG; each emitter-frame gets its own stream so the
 // field is a pure function of the frame (seekable); the original draws from one global stream, so only the statistics match.
 const f32=Math.fround,LCG=s=>(Math.imul(s,0x41c64e6d)+0x3039)>>>0;
-function spawnFrame(e,j,pos){const out=[];let st=LCG((e*7919+j*104729+12345)>>>0);const rnd=()=>{st=LCG(st);return (st>>>16)&0x7fff;};
+let PS=null;export const setPSeeds=(o)=>{PS=o;};   // exact RNG seed and emitter position of every emitter call of the original (72.5-93.7 s), see WRITEUP-asm.md 31
+function spawnFrame(e,j,pos){const out=[];let st=PS&&PS.seed[e][j]?PS.seed[e][j]>>>0:LCG((e*7919+j*104729+12345)>>>0);if(PS&&PS.pos[e][j]){const q=PS.pos[e][j];pos=[q[0],q[2],q[1]];}const rnd=()=>{st=LCG(st);return (st>>>16)&0x7fff;};
   for(let i=0;i<7;i++){const q=()=>f32(f32(f32((rnd()%1000)*0.4000000059604645)*0.002)-0.4000000059604645);const a=q(),b=q(),c=q();
     const cl=x=>Math.max(0,Math.min(255,x|0));
     const vel=[0,0,0].map(()=>f32((rnd()%1000)*0.01-5)),r=f32((rnd()&0xffff)*1.52587890625e-5+4.1),size=f32((rnd()%1000)*0.005+3);
