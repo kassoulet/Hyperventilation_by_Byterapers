@@ -205,7 +205,13 @@ export function drawScene(R,S,cam,matFor,opts){
     const f=m.obj.faces;
     for(let i=0;i<m.nf;i++){
       const mat=matFor(m.faceMat[i],m);if(!mat)continue;
-      const P=[CV[f[i*3]],CV[f[i*3+1]],CV[f[i*3+2]]];
+      let P=[CV[f[i*3]],CV[f[i*3+1]],CV[f[i*3+2]]];
+      if(m.obj.staleUV&&S.planarUV){   // objects without texture coordinates: planar mapping per face, one texture tile per 100 units (measured on the room's lift-shaft box)
+        const L=[0,1,2].map(k=>[m.loc[f[i*3+k]*3],m.loc[f[i*3+k]*3+1],m.loc[f[i*3+k]*3+2]]);
+        const e1=[L[1][0]-L[0][0],L[1][1]-L[0][1],L[1][2]-L[0][2]],e2=[L[2][0]-L[0][0],L[2][1]-L[0][1],L[2][2]-L[0][2]];
+        const nn=[Math.abs(e1[1]*e2[2]-e1[2]*e2[1]),Math.abs(e1[2]*e2[0]-e1[0]*e2[2]),Math.abs(e1[0]*e2[1]-e1[1]*e2[0])];
+        const ax=nn[2]>=nn[0]&&nn[2]>=nn[1]?[0,1]:nn[1]>=nn[0]?[0,2]:[1,2];const SC=0.01;
+        P=P.map((c,k)=>{const q=Float32Array.from(c);q[3]=L[k][ax[0]]*SC;q[4]=1-L[k][ax[1]]*SC;return q;});}
       out.length=0;clipTri(P,out);
       for(const T of out){
         const ul=mat.unlit||o.unlit;
