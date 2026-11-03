@@ -4,6 +4,7 @@ import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engi
 import {SCENES,autoMats} from './scenes.js';
 const XL=0;
 const FD=0.19;   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
+const GHOSTS=[[35,10,53,20,3.1],[18,22,53,16,1.9],[52,2,10,24,1.3],[12,50,10,12,0.7],[3,24,27,14,0.34],[33,24,47,32,-0.2],[20,50,10,16,-0.35],[50,3,26,20,-0.9],[5,21,40,28,-1.5],[35,11,20,48,-2.3]];   // r,g,b multiplier, size, position along the axis (0x106b08, stride 0x14)
 export class Demo{
   constructor(){this.R=new Raster();this.tex={};this.sc3={};this._m={};this.script=null;this.xm=null;this.t=0;this.cv=document.createElement('canvas');this.cv.width=W;this.cv.height=H;this.ctx=this.cv.getContext('2d');this.img=this.ctx.createImageData(W,H);this.u32=new Uint32Array(this.img.data.buffer);}
   async load(progress){
@@ -15,6 +16,7 @@ export class Demo{
     this.isoballs=await (await fetch(base+'isoballs.json')).json();
     this.mc=await (await fetch(base+'mc.json')).json();   // marching-cubes triangle table of the original (0x109120)
     this.lanim=await (await fetch(base+'lightanim.json')).json();   // animated light ranges sampled from the original
+    this.flares=await (await fetch(base+'flares.json')).json();   // lights flagged for lens flares, per call of the original's 0x31180 (see WRITEUP-asm.md 24)
     this.fog=await (await fetch(base+'fog.json')).json();   // [t,flag,k] per original frame: depth-fade state of the original's lighter
     const names=new Set(['glow','lens','particle']);
     for(const s of this.script.sprites)if(s.img)names.add(s.img.replace(/\.png$/i,''));
@@ -51,10 +53,11 @@ export class Demo{
   mats(n){return this._m[n]||(this._m[n]=autoMats(this,this.sc3[n].sc));}
   currentScene(t){for(const S of SCENES)if(t>=S.t0&&t<S.t1)return S;return null;}
   renderAt(t){
-    this.t=t;const R=this.R;R.clear(0);
+    this.t=t;const R=this.R;R.clear(0);R.cam=null;
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);
     // 2D layers
+    this.drawFlares(t);
     this.drawSprites(t);
     const f=this.flashAt(t);if(f){const c=f.col,fr=(c>>16)&255,fg=(c>>8)&255,fb=c&255;// colour order in the script is 0xRRGGBB
       const fbp=R.fb;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
@@ -62,6 +65,32 @@ export class Demo{
   }
   fadeOf(id,t){const o=this.spritesAt(t).find(x=>x.id===id);if(!o)return 0;let a=o.nx.alpha;const s=o.s;
     if(s.fin)a*=Math.min(1,Math.max(0,(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70)));if(s.fout)a*=1-Math.min(1,Math.max(0,(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70)));return a;}
+  // Lens flares (0x31180): per flagged light a glow sprite (additive, colour*alpha) and, when the engine flag 8 is set and the glow is big enough, ten flat-coloured hexagons along the line through the screen centre.
+  drawFlares(t){
+    const R=this.R,cam=R.cam,F=this.flares;if(!cam||!F)return;
+    let lo=0,hi=F.length;while(lo<hi){const m=(lo+hi)>>1;if(F[m][0]<t-1e-4)lo=m+1;else hi=m;}
+    const rec=F[lo];if(!rec||rec[0]-t>=0.1)return;
+    const [,eng,f4,fog,fk,Ls,tests]=rec,used=new Set(),glow=this.tex['glow'],lens=this.tex['lens'];
+    const blit=(tex,cx,cy,w,c,flat)=>{const td=tex.d,tw=tex.w,th=tex.h,x0=Math.max(0,Math.floor(cx-w/2)),x1=Math.min(W-1,Math.ceil(cx+w/2)),y0=Math.max(VY,Math.floor(cy-w/2)),y1=Math.min(VY+VH-1,Math.ceil(cy+w/2));
+      const L=flat?c:c.map(x=>x>>2);
+      for(let y=y0;y<=y1;y++){const tv=(y+0.5-(cy-w/2))/w;if(tv<0||tv>=1)continue;const ty=(tv*th)|0;
+        for(let x=x0;x<=x1;x++){const tu=(x+0.5-(cx-w/2))/w;if(tu<0||tu>=1)continue;const tp=td[ty*tw+((tu*tw)|0)],o=y*W+x,p=R.fb[o];let a,b,g;
+          if(flat){if(!(tp&0xffffff))continue;a=L[0];g=L[1];b=L[2];}else{const q=tp&255;a=(q*L[0])>>5;g=(q*L[1])>>5;b=(q*L[2])>>5;}
+          R.fb[o]=0xff000000|(Math.min(255,((p>>16)&255)+b)<<16)|(Math.min(255,((p>>8)&255)+g)<<8)|Math.min(255,(p&255)+a);}}};
+    for(const [e8,d8,e0,f0,cr,cg,cb,X,Y,Z] of Ls){
+      const v=cam.toView([X,Z,Y]),zv=v[2];if(zv<1.5)continue;
+      const sx=159.5+cam.pfocal*v[0]/zv,sy=99.5-cam.pfocal*v[1]/zv;if(sx<0||sx>=320||sy<0||sy>=200)continue;
+      // 0x2b6a8: the light shows only where the original's depth buffer holds something farther; the frustum test and this result are sampled from the original (its geometry differs slightly from the port's)
+      const ti=tests.findIndex((q,i)=>!used.has(i)&&Math.abs(q[0]-zv)<0.005*zv);if(ti<0)continue;used.add(ti);if(!tests[ti][1])continue;
+      let a=f0;
+      if(f4&4)a*=1-((zv-1.5)*0.9/(1251.5028-1.5)+0.1);else if(fog)a*=0.5+(1-zv*fk)*0.5;
+      const w=2*d8*160/zv;if(w>512)continue;
+      if(e8&1)blit(glow,sx,VY+sy,w,[cr,cg,cb].map(c=>Math.trunc(c*a)),false);
+      const sz=w*e0*a,dx=159.5-sx,dy=99.5-sy,dd=(dx*dx+dy*dy)/(2*160*160);
+      if(!(eng&8)||!(sz>10))continue;
+      const q=(1-dd)*(sz<20?(sz-10)/10:1);
+      for(const [r,g,b,sw,pos] of GHOSTS)blit(lens,159.5-pos*dx,VY+99.5-pos*dy,sw,[Math.trunc(cr/255*q*r),Math.trunc(cg/255*q*g),Math.trunc(cb/255*q*b)],true);}
+  }
   drawSprites(t){
     const R=this.R;
     for(const {spr,nx,s} of this.spritesAt(t)){

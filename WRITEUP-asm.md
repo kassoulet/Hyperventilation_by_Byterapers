@@ -336,3 +336,14 @@ Texel 0 is skipped by the palette-additive blitter, so a full-viewport kind-2 im
 ## 23. Space scene (0-30 s)
 
 The camera is `Camera01` of `space2.3ds` at 3DS frame = scene tick, which lags the timeline by one 7-tick frame (tick 1568 at 22.5 s; the engine matrix gives the camera position to 0.006 units). The projection uses the same `160/tan(fov/2)` as the particles (the empirical 128.7 focal is gone). The static object `fd` at (0, -5, 4939) is not drawn by the original (the blue chevron shape it produces in the port is absent from the reference), so it is skipped. Mean 15.2 -> 14.9/255.
+
+## 24. Lens flares (0x31180) and scene ticks
+
+`0x31180` runs after the particle stage in space, room, hallu/piikit and balls. For each light with `[L+0xe8] != 0` (lights named `flash*`, the emitter lights with bit 4, hallu's glow lights): the light is projected like a particle (`x = 159.5 + f*xv/z`, `y = 99.5 - f*yv/z`, `f = 160/tan(fov/2)`), tested against the frustum (`0x44020`: near, far, |x'| <= z, |y'| <= z) and against the 16-bit depth buffer (`0x2b6a8`: visible if the stored depth, `z*[0x149968]>>6` units, is larger than the light's). Then, with `alpha = [L+0xf0]` scaled by the depth fade (`1 - 0.5*z*k` when the fog flag `0x1499e8` is set; `1 - ((z-near)*0.9/(far-near)+0.1)` when `[0x1498d4]` bit 4 is set, as in the room):
+- bit 1 of `[L+0xe8]`: a glow sprite (`glow.png`, blitter `0x53563`, colour bytes `trunc(col*alpha)`), side `2*[L+0xd8]*160/z` (`[L+0xd8]` is the light's inner range), skipped if > 512;
+- engine flag 8 (`[eng+0x2c]`) and `s = side*[L+0xe0]*alpha > 10`: ten hexagons of `lens.png`, blitter `0x536a0` (flat colour added wherever the texel is not 0). Hexagon `k` sits at `159.5 - p_k*(159.5 - sx)`, `99.5 - p_k*(99.5 - sy)`, has side `s_k` and colour `trunc(col/255 * q * m_k)`, with `q = (1 - (dx^2+dy^2)/(2*160^2)) * min(1, (s-10)/10)`. The ten rows (`m_r, m_g, m_b, s_k, p_k`, table `0x106b08`, stride 0x14) are in `demo.js` (`GHOSTS`);
+- engine flag 0x10 (the white screen glare, `vtable+0x78`) is never set.
+
+The port reads the per-call light list (colour, range, alpha, position, plus the frustum/depth-test outcome, because its own depth buffer differs slightly from the original's) from `assets/flares.json`, dumped from the emulator, and draws the record of the first frame at or after `t`. The sprite count per frame now matches the original in space, the room (46-51 s) and hallu/piikit.
+
+Scene ticks recorded with the flares: the room's 3DS frame is `trunc(1.2*tick)` like hallu's (it was 1.0*tick); hallu's tick is `70*(t - 72.5)`, piikit's `70*(t - 83.1)`, hallu2 `987 + 70*lt`, piikit2 `742 + 70*lt` (each one frame lower than the earlier fits). Mean 14.9 -> 14.7/255.

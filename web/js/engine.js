@@ -176,7 +176,7 @@ export const lightsDefault=[{dir:norm([0.4,-0.6,0.7]),col:[1,1,1]}];
 // render all meshes of a Scene3D with camera cam; matFor(name)->material {tex,env,bump,mode,r,g,b,envk,...}
 export function drawScene(R,S,cam,matFor,opts){
   const o=opts||{};const amb=S.sc.ambient,lights=o.lights||S.lightsAt(o.frame||0,o.t),fogK=o.fogK||0,cull=o.cull===undefined?true:o.cull;
-  const fz=cam.focal;const out=[];
+  const fz=cam.focal;const out=[];R.cam=cam;
   for(const m of S.meshes){
     if(m.hidden)continue;if(o.skip&&o.skip(m.node.name))continue;
     const nv=m.nv,CV=new Array(nv);
