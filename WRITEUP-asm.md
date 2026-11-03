@@ -357,3 +357,13 @@ Scene ticks recorded with the flares: the room's 3DS frame is `trunc(1.2*tick)` 
 ## 26. Render tick = frame-boundary tick - 7
 
 The scene tick `[0x10eb9c]` read at a frame boundary (what the reference harness logs) is `70 * (t - scene start)`, but the frame shown at that boundary was rendered one 7-tick frame earlier, so every tick-driven effect uses `tick - 7` (measured: space camera, room, hallu, piikit, flares; confirmed with boundary ticks 168/518/868 at 32.5/37.5/42.5 s for the lava tunnel, 112 at 134.5 for swirl 2, 42 at 137.5 for the force scene, 175 at 142.5 for the last tunnel, 126/476/826 for the metaballs). Applying it to the lava tunnel, swirl 2, the force scene, the last tunnel sub-scene and the metaballs: 32.5 s 17 -> 3, 137.5 s 30 -> 17, 42.5 s 18 -> 14. Mean 14.7 -> 13.9/255. (The blob scene's object frame and the flesh scene's frame counter do not change measurably.)
+
+## 27. The photos scene (114.9-128.6 s) hides a ray-traced two-layer effect (0x20bc4) - not ported yet
+
+Every frame of the photos scene calls the callback at `0x20bc4` before the photo sprites are drawn (the cell filler `0x34db4` runs twice per frame, `0x35e4c` blends the photos). It is the same effect the last swirl sub-scene (140-143.8 s) is made of, and it is why the reference frames around 122 s show a smeared, whitish copy of the photo (error 27 at 122.5 s):
+
+- `0x20bc4`: time from the scene tick (`[0x10eb9c]`) drives a rotation angle (`[0x1218d8]`, 10-bit) and an offset (`[0x105d7c]`, `[0x105d80]`), builds a camera/object matrix (`0x322dc`), and calls the grid builder `0x202a4`.
+- `0x202a4` is a small ray tracer: for each of the 41x26 grid vertices it interpolates a ray between the transformed corners of the view box, solves a quartic (`0x355c4`, with `pow` in `0x39eca`, and a second quadratic `0x35548`) for the nearest positive root, converts the hit point to spherical coordinates with `fpatan` (`0x34d81`) and stores two 8.24-ish grids (`0x122998`, `0x124ae8`: `u = round(...)<<9`, `v = round(...)<<8`/`<<9`) and a per-vertex shade (`0x1218f0`). The two textures are 256x256 8-bit (`holemap0/1`); the filled layers are two 320x200 8-bit pages.
+- `0x34d24 -> 0x351ef` composites the layers: per pixel `LUT0[(shade<<8)|layer1] + LUT1[(shade<<8)|layer2]` (palette-times-shade tables at `[0x21b314 + 4*k]`, k = 0 and 1 pushed by the caller), with the shade interpolated bilinearly per 8x8 cell.
+
+Not reversed yet: the quartic solver and its constants (`0x101560..0x1015f8`, `0x102b68..0x102bb0`), the table contents of `[0x21b314]`, and the order of the photo sprites over this underlay.
