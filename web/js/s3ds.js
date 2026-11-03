@@ -89,6 +89,10 @@ function tcbTan(keys,i,dim){
     const a=v[d]-pv[d],bb=nv[d]-v[d];
     if(loop&&(i===0||i===n-1)){const P=keys[n-2].v[d],N=keys[1].v[d],V=keys[0].v[d],A=V-P,B=N-V;   // looped track: the first/last key use their wrapped neighbours (0x38fc0 wraps the time)
       tout[d]=tin[d]=0.5*((1-t)*(1+b)*(1+c)*A+(1-t)*(1-b)*(1-c)*B);}
+    else if(i===0&&n>2){const k1=keys[1],k2=keys[2],a1=k1.v[d]-v[d],b1=k2.v[d]-k1.v[d],t1=k1.t||0,c1=k1.c||0,bi1=k1.b||0;   // open track, first key: 1.5*(P1-P0) - 0.5*(incoming tangent of key 1) (matched to 0.03 units against the engine's camera path)
+      tin[d]=tout[d]=1.5*a1-0.5*0.5*((1-t1)*(1+bi1)*(1-c1)*a1+(1-t1)*(1-bi1)*(1+c1)*b1);}
+    else if(i===n-1&&n>2){const k1=keys[n-2],k0=keys[n-3],a1=k1.v[d]-k0.v[d],b1=v[d]-k1.v[d],t1=k1.t||0,c1=k1.c||0,bi1=k1.b||0;   // last key: 1.5*(Pn-Pn-1) - 0.5*(outgoing tangent of key n-2)
+      tin[d]=tout[d]=1.5*b1-0.5*0.5*((1-t1)*(1+bi1)*(1+c1)*a1+(1-t1)*(1-bi1)*(1-c1)*b1);}
     else if(i===0){tin[d]=tout[d]=bb;}else if(i===n-1){tin[d]=tout[d]=a;}
     else{tout[d]=0.5*((1-t)*(1+b)*(1+c)*a+(1-t)*(1-b)*(1-c)*bb);tin[d]=0.5*((1-t)*(1+b)*(1-c)*a+(1-t)*(1-b)*(1+c)*bb);}
   }

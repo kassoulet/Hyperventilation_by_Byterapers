@@ -300,6 +300,7 @@ const S3=(d,n)=>d.sc3[n];
 export const SCENES=[
  {name:'space',t0:0,t1:30.1,tex:['orionmos','laatta','doom'],
   render(d,R,lt,t){const {S,sc}=S3(d,'space2');const f=Math.max(0,t*TICK-7);S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
+    {const m=S.meshes.find(x=>x.node.name==='lock');if(m){const c0=[-150.7,0.1,5000];for(let k=0;k<m.nv;k++)for(let a=0;a<3;a++)m.wv[k*3+a]+=cam.pos[a]-c0[a];}}   // the cavern sphere follows the camera (measured: the visible wall is a sphere centred on the camera, not on the object's file position)
     drawScene(R,S,cam,d.mats('space2'),{frame:f,t,fogK:d.fogAt(t),cull:false,skip:n=>n==='fd'});}},
  {name:'lava tunnel',t0:30.1,t1:44.3,tex:['forcemao','forcemap'],
   render(d,R,lt,t){tunnel(d,R,d.tex['forcemap'],Math.max(0,lt*TICK-7));}},
