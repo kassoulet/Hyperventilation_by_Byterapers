@@ -274,10 +274,11 @@ export const SCENES=[
    S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.pfocal;
     drawScene(R,S,cam,d.mats('hallu'),{frame:f,t,fogK:d.fogAt(t)});drawParticles(d,R,S,cam,tick);}},
  {name:'piikit',t0:83.1,t1:86.6,tex:['kuvio','ruoho','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*(lt+0.1));},
-  draw(d,R,t,tick){const {S}=S3(d,'piikit2');const f=tick;   // callback 0x1f45c: frame = scene tick (no 1.2 factor)
-    S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('piikit2'),{frame:f,t,fogK:d.fogAt(t)});}},
+  draw(d,R,t,tick,camName){const {S}=S3(d,'piikit2');const f=tick;   // 93.7-100.7 s uses Camera03 (camera positions match the original exactly)
+    camName=camName||'Camera01';   // callback 0x1f45c: frame = scene tick (no 1.2 factor)
+    S.pose(f);const cam=S.camera(camName,f);if(!cam)return;cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('piikit2'),{frame:f,t,fogK:d.fogAt(t)});}},
  {name:'hallu2',t0:86.6,t1:93.7,render(d,R,lt,t){SCENES[5].draw(d,R,t,994+70*lt);}},
- {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,749+70*lt);}},
+ {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,749+70*lt,'Camera03');}},
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt);}},
  {name:'photos',t0:114.9,t1:128.6,render(d,R,lt,t){}},
