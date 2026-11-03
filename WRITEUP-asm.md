@@ -332,3 +332,7 @@ Scene cameras were checked against the original by recovering the camera positio
 - **balls (143.8-157.8 s, callback `0x24f08`)**: the 3DS time is **music-synchronised**: `frame = trunc(([0x10eb78]*64 + [0x10eb80] - [0x106608]) * 12.5)`, i.e. the song position (order*64 + row) minus the position at the scene start (2495 = order 38, row 63) times 12.5 frames per row; the camera track wraps modulo 1201. Background `raita.png` is copied into the frame buffer first (0x3e800 bytes), then the scene is drawn, then the particle stage and the light flares. The port reads the position from `xm_times.json` (0.1 s earlier than the frame time). Mean error 16.7 -> 16.0/255 (147.5: 35 -> 23, 157.5: 30 -> 16).
 
 Texel 0 is skipped by the palette-additive blitter, so a full-viewport kind-2 image with v4 = 0 (`skenenp2.png`, the coat over the lava tunnel at 36-44 s) leaves the scene visible through its black. The port now skips black texels for those sprites (37.5: 26 -> 7, 42.5: 29 -> 18). Mean 16.0 -> 15.2/255.
+
+## 23. Space scene (0-30 s)
+
+The camera is `Camera01` of `space2.3ds` at 3DS frame = scene tick, which lags the timeline by one 7-tick frame (tick 1568 at 22.5 s; the engine matrix gives the camera position to 0.006 units). The projection uses the same `160/tan(fov/2)` as the particles (the empirical 128.7 focal is gone). The static object `fd` at (0, -5, 4939) is not drawn by the original (the blue chevron shape it produces in the port is absent from the reference), so it is skipped. Mean 15.2 -> 14.9/255.

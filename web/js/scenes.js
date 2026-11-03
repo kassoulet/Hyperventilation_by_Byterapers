@@ -266,8 +266,8 @@ function isoScene2(d,R,lt){
 const S3=(d,n)=>d.sc3[n];
 export const SCENES=[
  {name:'space',t0:0,t1:30.1,tex:['orionmos','laatta','doom'],
-  render(d,R,lt,t){const {S,sc}=S3(d,'space2');const f=t*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.focal0;
-    drawScene(R,S,cam,d.mats('space2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
+  render(d,R,lt,t){const {S,sc}=S3(d,'space2');const f=Math.max(0,t*TICK-7);S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
+    drawScene(R,S,cam,d.mats('space2'),{frame:f,t,fogK:d.fogAt(t),cull:false,skip:n=>n==='fd'});}},
  {name:'lava tunnel',t0:30.1,t1:44.3,tex:['forcemao','forcemap'],
   render(d,R,lt,t){tunnel(d,R,d.tex['forcemap'],lt*TICK);}},
  {name:'room',t0:44.3,t1:51.1,tex:['seina','plate','lattia','0floor','0reuna','pylvas','seina2','rako','6','hissi'],
