@@ -271,12 +271,13 @@ export const SCENES=[
     const cam=S.camera('Camera01',f)||S.camera(Object.keys(S.sc.cams)[0],f);if(cam)drawScene(R,S,cam,d.mats('dmoykk2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'hallu',t0:72.55,t1:83.1,tex:['ruoho','0ikkuna','marmori2','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*(lt+0.15));},   /* the original's scene tick restarts at 72.4 but its first frame appears at ~72.55 */
   draw(d,R,t,tick){const {S}=S3(d,'hallu');const f=Math.trunc(tick*1.2);   // the callback 0x1e7d8 sets frame = trunc(1.2*scene tick)
-   S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
+   S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.pfocal;
     drawScene(R,S,cam,d.mats('hallu'),{frame:f,t,fogK:d.fogAt(t)});drawParticles(d,R,S,cam,tick);}},
- {name:'piikit',t0:83.1,t1:86.6,tex:['kuvio','ruoho','envgreen'],render(d,R,lt,t){this.draw(d,R,t,lt);},
-  draw(d,R,t,lt){const {S}=S3(d,'piikit2');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;drawScene(R,S,cam,d.mats('piikit2'),{frame:f,t,fogK:d.fogAt(t)});}},
+ {name:'piikit',t0:83.1,t1:86.6,tex:['kuvio','ruoho','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*(lt+0.1));},
+  draw(d,R,t,tick){const {S}=S3(d,'piikit2');const f=tick;   // callback 0x1f45c: frame = scene tick (no 1.2 factor)
+    S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('piikit2'),{frame:f,t,fogK:d.fogAt(t)});}},
  {name:'hallu2',t0:86.6,t1:93.7,render(d,R,lt,t){SCENES[5].draw(d,R,t,994+70*lt);}},
- {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,lt+3);}},
+ {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,749+70*lt);}},
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt);}},
  {name:'photos',t0:114.9,t1:128.6,render(d,R,lt,t){}},
