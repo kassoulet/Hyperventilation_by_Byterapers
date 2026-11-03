@@ -1,6 +1,7 @@
 // scenes.js - the demo's scenes, reconstructed from the original's render callbacks (see WRITEUP-effects.md).
 // Each: {t0,t1 (s of music), tex:[extra textures], render(demo,R,localTime,t)}. Everything is a pure function of t.
 import {drawScene,norm,W,H,VY,VH} from './engine.js';
+import {holeFrame} from './holefx.js';
 const TICK=70;   // the original advances 3DS keyframes with its 70 Hz timer
 const hash=(n)=>{n=Math.imul(n^61,0x45d9f3b);n^=n>>>15;n=Math.imul(n,0x2c1b3c6d);n^=n>>>12;return (n>>>0)/4294967296;};
 // material table from the .3DS: map -> texture, reflection map -> env, bump -> bump
@@ -195,6 +196,37 @@ function fillLayer(g,idx,out){
       for(let x=0;x<8;x++,o++){out[o]=idx[(((cv>>8)&255)<<8)|((cu>>8)&255)]&255;cu+=su;cv+=sv;}
     }}
 }
+// The ray-traced two-layer effect (callback 0x20bc4): grids from holefx.js (the original's code), cell filler 0x34db4 into two layers, compositor 0x351ef:
+// per pixel (c1*s>>7)+(c2*s>>7) per channel, s = shade (top byte of a 32-bit value interpolated bilinearly inside each 8x8 cell).
+function fillRGB(g,tex,out){
+  const NX=41,td=tex.d;
+  for(let j=0;j<25;j++)for(let i=0;i<40;i++){
+    const a=(j*NX+i)*2,b=a+2,cc=a+NX*2,e=cc+2,dLu=I32(g[cc]-g[a])>>3,dLv=I32(g[cc+1]-g[a+1])>>3,dRu=I32(g[e]-g[b])>>3,dRv=I32(g[e+1]-g[b+1])>>3;
+    let Lu=g[a],Lv=g[a+1],Ru=g[b],Rv=g[b+1];
+    for(let k=0;k<8;k++){
+      Lu=I32(Lu+dLu);Lv=I32(Lv+dLv);Ru=I32(Ru+dRu);Rv=I32(Rv+dRv);
+      const su=I32(Ru-Lu)>>19,sv=I32(Rv-Lv)>>19;let cu=Lu>>>16,cv=Lv>>>16,o=(j*8+k)*320+i*8;
+      for(let x=0;x<8;x++,o++){out[o]=td[(((cv>>8)&255)<<8)|((cu>>8)&255)];cu+=su;cv+=sv;}
+    }}
+}
+let _hl1=null,_hl2=null;
+function holeScene(d,R,t){
+  const t1=d.tex['holemap0'],t2=d.tex['holemap1'];if(!t1||!t2)return;
+  const n=Math.max(1,Math.min(137,Math.ceil((t-114.9)*10-1e-6)));   // one call of the callback per 7-tick frame, the first at 115.0 s
+  const {g0,g1,sh}=holeFrame(n);
+  if(!_hl1){_hl1=new Uint32Array(64000);_hl2=new Uint32Array(64000);}
+  fillRGB(g0,t1,_hl1);fillRGB(g1,t2,_hl2);
+  const fb=R.fb;
+  for(let j=0;j<25;j++)for(let i=0;i<40;i++){
+    const a=j*41+i,TL=sh[a],TR=sh[a+1],BL=sh[a+41],BR=sh[a+42];
+    let L=TL,Rt=TR;const dL=I32(BL-TL)>>3,dR=I32(BR-TR)>>3;
+    for(let k=0;k<8;k++){
+      Rt=I32(Rt+dR);L=I32(L+dL);const step=I32(Rt-L)>>19;let cur=L>>>16,o=(j*8+k)*320+i*8;
+      for(let x=0;x<8;x++,o++){const s=(cur>>8)&255,p=_hl1[o],q=_hl2[o];cur+=step;
+        const r=((p&255)*s>>7)+((q&255)*s>>7),g=(((p>>8)&255)*s>>7)+(((q>>8)&255)*s>>7),b=(((p>>16)&255)*s>>7)+(((q>>16)&255)*s>>7);
+        fb[(VY+j*8+k)*W+i*8+x]=0xff000000|(b<<16)|(g<<8)|r;}
+    }}
+}
 let _fmask=null;
 function force(d,R,t){
   const T=Math.floor(t*70),tx1=d.tex['mefisidx'],tx2=d.tex['forcemaoidx'];
@@ -289,7 +321,7 @@ export const SCENES=[
  {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,742+70*lt,'Camera03');}},
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt-0.1);}},
- {name:'photos',t0:114.9,t1:128.6,render(d,R,lt,t){}},
+ {name:'photos',t0:114.9,t1:128.6,tex:['holemap0','holemap1'],render(d,R,lt,t){holeScene(d,R,t);}},
  {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0','fil','doom','envplane'],
   // four sub-scenes (the original's scene tick restarts at 128.6, 132.9, 136.9 and 140.0 s); textures chosen by colour (the original recolours them with palettes; sub-scene 2's hue is approximate)
   render(d,R,lt,t){if(t<132.9){swirl1(d,R,t);return;}if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9-0.1);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9-0.1);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
