@@ -302,3 +302,5 @@ The sprite blitter (`0x42738`, reached through the engine object's vtable +0x64)
 | 12 (bit 8 set) | `0x53ff8` | subtractive: `dst -= t·alpha`, clamped at 0 (the black lyric boxes at 115–122 s and 143–157 s) |
 
 `t` is `0x149a18[alpha<<8 | texel]`. Texel 0 is skipped. The table dump from the emulator shows that the image/position columns of the sprite table sit one record behind the kind/alpha/v4 columns: script event 21 draws `itused.png` (320x77) with record 21's v4 = 4. `demo.js` takes the blend class from the next JSON record (`nx`). Mean error 23.7 → 21.8/255.
+
+Photo sprites use the same offset: the photo at 117.5 s is blended by `0x35e4c` with alpha 0x8c (0.55, record 17's alpha), not drawn opaque. Sprite fades (commands 4/5) start about 0.19 s (2 frames) after the script event (event at 122.136 s, first alpha step at 122.33 s). Mean error 21.8 → 20.5/255.

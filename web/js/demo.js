@@ -3,6 +3,7 @@ import {parse3DS} from './s3ds.js';
 import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engine.js';
 import {SCENES,autoMats} from './scenes.js';
 const XL=0;
+const FD=0.19;   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
 export class Demo{
   constructor(){this.R=new Raster();this.tex={};this.sc3={};this._m={};this.script=null;this.xm=null;this.t=0;this.cv=document.createElement('canvas');this.cv.width=W;this.cv.height=H;this.ctx=this.cv.getContext('2d');this.img=this.ctx.createImageData(W,H);this.u32=new Uint32Array(this.img.data.buffer);}
   async load(progress){
@@ -61,9 +62,9 @@ export class Demo{
     const R=this.R;
     for(const {spr,nx,s} of this.spritesAt(t)){
       const tex=this.tex[spr.img&&spr.img.replace(/\.png$/i,'')];if(!tex)continue;
-      let a=nx.kind===2?nx.alpha:spr.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
-      if(s.fin){const k=(t-s.fin[0])/(Math.max(s.fin[1],1)/70);a*=Math.min(1,Math.max(0,k));}
-      if(s.fout){const k=(t-s.fout[0])/(Math.max(s.fout[1],1)/70);a*=1-Math.min(1,Math.max(0,k));}
+      let a=nx.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
+      if(s.fin){const k=(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70);a*=Math.min(1,Math.max(0,k));}
+      if(s.fout){const k=(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70);a*=1-Math.min(1,Math.max(0,k));}
       if(a<=0)continue;
       const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&!(tex.w>=320&&tex.h>=200);   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
