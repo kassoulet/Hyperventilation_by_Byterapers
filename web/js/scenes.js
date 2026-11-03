@@ -233,7 +233,7 @@ export const SCENES=[
  {name:'room',t0:44.3,t1:51.1,tex:['seina','plate','lattia','0floor','0reuna','pylvas','seina2','rako','6','hissi'],
   render(d,R,lt,t){const {S}=S3(d,'0room3');const f=lt*TICK*1.0;S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;drawScene(R,S,cam,d.mats('0room3'),{frame:f,t,fogK:d.fogAt(t)});}},
  {name:'portrait',t0:51.1,t1:58.2,tex:['purple'],
-  render(d,R,lt,t){blit(R,d.tex['purple'],0,t,1.0+lt*0.02,0,0);}},
+  render(d,R,lt,t){blit(R,d.tex['purple'],0,t,1.0+lt*0.02,0,0);const f=d.fadeOf(39,t);if(f<1)for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=R.fb[o];R.fb[o]=0xff000000|((((p>>16)&255)*f)<<16)|((((p>>8)&255)*f)<<8)|(((p&255)*f)|0);}}},
  {name:'blob',t0:58.2,t1:72.55,tex:['keltanai','moykymap','moykyenv'],
   render(d,R,lt,t){blit(R,d.tex['keltanai'],0,t,1,0,0);const {S}=S3(d,'dmoykk2');const f=100+lt*TICK*0.9;S.pose(f);
     const cam=S.camera('Camera01',f)||S.camera(Object.keys(S.sc.cams)[0],f);if(cam)drawScene(R,S,cam,d.mats('dmoykk2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
