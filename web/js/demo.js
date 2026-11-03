@@ -30,20 +30,21 @@ export class Demo{
     const ev=this.script.events,sp=this.script.sprites,out=[];
     const st={};
     for(const e of ev){
-      if(e.t>t)break;if(e.type!==3||e.fn!==0x222c4)continue;
+      if(e.t>t-FD)break;if(e.type!==3||e.fn!==0x222c4)continue;
       const id=e.b;
       if(e.a===1)st[id]={t0:e.t,fin:null,fout:null,t1:null,dx:0};
       else if(e.a===2&&st[id])st[id].t1=e.t;
       else if(e.a===4&&st[id])st[id].fin=[e.t,e.c];
       else if(e.a===5&&st[id])st[id].fout=[e.t,e.c];
     }
-    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1)continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
+    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1+FD)continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
     return out;
   }
   flashAt(t){ // flash_color events: colour, duration in ticks (70 Hz)
-    let best=null;for(const e of this.script.events){if(e.t>t)break;if(e.type===3&&e.fn===0x222c4&&e.a===7)best=e;}
-    if(!best)return null;let t0=best.t;const sc=this.currentScene(t);if(sc&&sc.t0>=t0&&sc.t0-t0<0.2)t0=sc.t0;   // the original starts the fade at the first frame after the event (the scene's reset tick)
-    const dur=best.c/70,a=1-(t-t0)/Math.max(dur,0.05);return a>0?{col:best.b,a}:null;
+    let best=null;for(const e of this.script.events){if(e.t+0.26>t)break;if(e.type===3&&e.fn===0x222c4&&(e.a===7||e.a===6))best=e;}
+    if(!best)return null;let t0=best.t;const sc=this.currentScene(t);if(sc&&sc.t0>=t0&&sc.t0-t0<0.2)t0=sc.t0;else t0+=0.26;   // the original starts the fade at the first frame after the event (the scene's reset tick)
+    const dur=best.c/70;if(best.a===6)return {col:best.b,a:Math.min(1,Math.max(0,(t-t0)/Math.max(dur,0.05)))};   // 6 = fade TO the colour (and it stays), 7 = flash from it
+    const a=1-(t-t0)/Math.max(dur,0.05);return a>0?{col:best.b,a}:null;
   }
   fogAt(t){const a=this.fog;let lo=0,hi=a.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(a[m][0]<=t)lo=m;else hi=m-1;}const r=a[lo];return r[1]?r[2]:0;}
   mats(n){return this._m[n]||(this._m[n]=autoMats(this,this.sc3[n].sc));}
