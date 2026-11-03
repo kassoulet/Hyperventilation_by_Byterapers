@@ -99,6 +99,7 @@ export class Camera{
   toView(p){const d=sub(p,this.pos);return [dot(d,this.r),dot(d,this.u),dot(d,this.f)];}
   dirToView(n){return [dot(n,this.r),dot(n,this.u),dot(n,this.f)];}
 }
+export function lightRecord(R,t){let lo=0,hi=R.length;while(lo<hi){const m=(lo+hi)>>1;if(R[m][0]<t-1e-4)lo=m+1;else hi=m;}const r=R[lo];return r&&r[0]-t<0.1?r[1]:null;}
 // ---------------------------------------------------------------- 3DS scene instance
 export class Scene3D{
   constructor(sc){
@@ -147,6 +148,8 @@ export class Scene3D{
   // squared inner/outer range, multiplier. The 'flash' lights' ranges are animated by the original's scene code (a chase: range = base*max(0,cos)); that animation was
   // sampled from the original (tools/bake_lights.py, assets/lightanim.json) and is replayed here. A light with outer range 0 never contributes (d2 > 0 always true).
   lightsAt(f,t){
+    const rec=this.lrec&&t!==undefined?lightRecord(this.lrec,t):null;   // exact light list of the original's lighter for that frame (see WRITEUP-asm.md 25)
+    if(rec)return rec.filter(l=>l[7]>0).map(l=>({pos:[l[3],l[5],l[4]],col:[l[0],l[1],l[2]],in2:l[6],out2:l[7],mult:l[8]}));
     if(!this._rank){this._rank={};const seen={};for(const n of this.sc.nodes){if(n.type!==0xB005)continue;const l=this.sc.lights[n.name];if(!l)continue;
       const c=l.color.map(Math.round).join(',');const r=seen[c]=(seen[c]||0);seen[c]++;this._rank[n.name]=c+'#'+r;}}
     const out=[];

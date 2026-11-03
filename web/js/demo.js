@@ -16,6 +16,7 @@ export class Demo{
     this.isoballs=await (await fetch(base+'isoballs.json')).json();
     this.mc=await (await fetch(base+'mc.json')).json();   // marching-cubes triangle table of the original (0x109120)
     this.lanim=await (await fetch(base+'lightanim.json')).json();   // animated light ranges sampled from the original
+    this.lrec=await (await fetch(base+'lights.json')).json();   // the lighter's light list (colour, position, inner^2, outer^2, multiplier) per frame, from the emulator
     this.flares=await (await fetch(base+'flares.json')).json();   // lights flagged for lens flares, per call of the original's 0x31180 (see WRITEUP-asm.md 24)
     this.fog=await (await fetch(base+'fog.json')).json();   // [t,flag,k] per original frame: depth-fade state of the original's lighter
     const names=new Set(['glow','lens','particle']);
@@ -24,7 +25,7 @@ export class Demo{
     const files=['space2','0room3','morph','morph2','meta1','dmoykk2','tvfin','ball2','piikit2','hallu'];
     let done=0,total=names.size+files.length;
     await Promise.all([...names].map(async n=>{try{this.tex[n]=await loadTex(base+'img/'+n+'.png');}catch(e){console.log('missing texture',n);}done++;progress&&progress(done/total);}));
-    await Promise.all(files.map(async n=>{const b=await (await fetch(base+'3ds/'+n+'.3ds')).arrayBuffer();const sc=parse3DS(b);this.sc3[n]={sc,S:new Scene3D(sc)};this.sc3[n].S.anim=this.lanim[n];done++;progress&&progress(done/total);}));
+    await Promise.all(files.map(async n=>{const b=await (await fetch(base+'3ds/'+n+'.3ds')).arrayBuffer();const sc=parse3DS(b);this.sc3[n]={sc,S:new Scene3D(sc)};this.sc3[n].S.anim=this.lanim[n];this.sc3[n].S.lrec=this.lrec;done++;progress&&progress(done/total);}));
     for(const S of SCENES)if(S.init)S.init(this);
   }
   // sprite state at time t from the script events (start/stop/fades)
