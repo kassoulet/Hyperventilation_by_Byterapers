@@ -62,20 +62,28 @@ const lavaAtt=(t)=>ATT.map(a=>[Math.cos((t+a[2])*a[0]*Math.PI)*150+160,Math.cos(
 const fleshAtt=(t)=>{const c=(t0,f,A,B)=>Math.cos((t+t0)*f*Math.PI)*A+B,K=16777216,P=Math.PI;
   const s0=Math.cos((t+0.82)*0.043)*130*K-150,s1=Math.cos(t*0.06)*100*K-120,s3=Math.cos(t*0.06)*105*K-120;
   return [[c(1300,0.0212,35,100),c(1030,0.0301,30,100),s0],[c(1299.8,0.0212,35,140),c(1029.8,0.0301,30,100),s1],[c(120,0.0492,35,180),c(710,0.0334,30,100),Math.cos((t+0.82)*0.043)*130*K-140],[c(119.8,0.0492,35,220),c(709.8,0.0334,30,100),s3]];};
-function tunnel(d,R,tex,tick,att,shMax,fOff,gam){
+function tunnel(d,R,tex,tick,att,shMax,fOff,gam,fDiv){
   att=att||lavaAtt;shMax=shMax||63.99;fOff=fOff===undefined?5500:fOff;if(gam===undefined)gam=false;
   const NX=41,NY=26,U=new Float32Array(NX*NY),Vv=new Float32Array(NX*NY),Sh=new Float32Array(NX*NY),A=att(tick);
   for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){const px=i*8,py=j*8;let uo=0,vo=0,sh=shMax;
-    for(const [cx,cy,st] of A){const dx=px-cx,dy=py-cy,r2=dx*dx+dy*dy,inv=st/(r2+500);uo+=dx*inv;vo+=dy*inv;const f=(r2+fOff)*(1/15000);if(f<1)sh*=f;}
+    for(const [cx,cy,st] of A){const dx=px-cx,dy=py-cy,r2=dx*dx+dy*dy,inv=st/(r2+500);uo+=dx*inv;vo+=dy*inv;const f=(r2+fOff)*(1/(fDiv||15000));if(f<1)sh*=f;}
     const o=j*NX+i;U[o]=px+uo/65536;Vv[o]=py+vo/65536;Sh[o]=sh;}
   const td=tex.d,fb=R.fb,G=gam?GAM:null;
   for(let j=0;j<NY-1;j++)for(let i=0;i<NX-1;i++){const o=j*NX+i;
     for(let y=0;y<8;y++){const fy=y/8;for(let x=0;x<8;x++){const fx=x/8;
       const w00=(1-fx)*(1-fy),w10=fx*(1-fy),w01=(1-fx)*fy,w11=fx*fy;
-      const u=U[o]*w00+U[o+1]*w10+U[o+NX]*w01+U[o+NX+1]*w11,v=Vv[o]*w00+Vv[o+1]*w10+Vv[o+NX]*w01+Vv[o+NX+1]*w11,sh=Sh[o]*w00+Sh[o+1]*w10+Sh[o+NX]*w01+Sh[o+NX+1]*w11;
+      // the original's 16.16 coordinates wrap at 256 texels in int32, so a cell interpolates along the shortest path between its corners
+      const wr=(a)=>a-256*Math.round(a/256),ua=wr(U[o+1]-U[o]),ub=wr(U[o+NX]-U[o]),uc=wr(U[o+NX+1]-U[o]),va=wr(Vv[o+1]-Vv[o]),vb=wr(Vv[o+NX]-Vv[o]),vc=wr(Vv[o+NX+1]-Vv[o]);
+      const u=U[o]+fx*ua+fy*ub+fx*fy*(uc-ua-ub),v=Vv[o]+fx*va+fy*vb+fx*fy*(vc-va-vb),sh=Sh[o]*w00+Sh[o+1]*w10+Sh[o+NX]*w01+Sh[o+NX+1]*w11;
       const px=td[((v|0)&255)*256+((u|0)&255)],row=sh|0;let r=px&255,g=(px>>8)&255,b=(px>>16)&255;if(G){r=G[r];g=G[g];b=G[b];}
       fb[(VY+j*8+y)*W+i*8+x]=0xff000000|((b*row>>6)<<16)|((g*row>>6)<<8)|((r*row)>>6);}}}
 }
+// 128.6-132.9 s: the swirl grid of 0x2522c on fil.png (two attractors, 4194303/65536 shade, f=(r^2+700)/14000) with the morph.3ds object (camera frame = scene tick) drawn over it (0x254a8)
+const P1=1300,P2=1030,FX=0.0212*Math.PI,FY=0.0301*Math.PI;
+const filAtt=(T)=>[[40*Math.cos((T+P1+40)*FX)+160,40*Math.cos((T+P2+40)*FY)+100,Math.fround(Math.cos((T+200)*0.02)*150*16777216-150)],
+  [40*Math.cos((T+P1+20)*FX)+160,40*Math.cos((T+P2+20)*FY)+100,Math.fround(Math.cos(T*0.03)*180*16777216-140)]];
+function swirl1(d,R,t){const tick=Math.floor(70*(t-128.6));tunnel(d,R,d.tex['fil'],tick,filAtt,31.99999,700,false,14000);
+  const {S}=S3(d,'morph');S.pose(tick);const cam=S.camera('Camera01',tick);if(cam){cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('morph'),{frame:tick,t,cull:false,unlit:true});}}
 function blit(R,tex,sc,t,zoom,ox,oy){ // full-viewport image with zoom/pan
   const fb=R.fb,d=tex.d;for(let y=0;y<VH;y++){const v=((y-100)/zoom+100+oy)/tex.h;const ty=Math.min(tex.h-1,Math.max(0,(v*tex.h)|0));
     for(let x=0;x<W;x++){const u=((x-160)/zoom+160+ox)/tex.w;const tx=Math.min(tex.w-1,Math.max(0,(u*tex.w)|0));fb[(y+VY)*W+x]=d[ty*tex.w+tx]|0xff000000;}}
@@ -282,9 +290,9 @@ export const SCENES=[
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt);}},
  {name:'photos',t0:114.9,t1:128.6,render(d,R,lt,t){}},
- {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0'],
+ {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0','fil','doom','envplane'],
   // four sub-scenes (the original's scene tick restarts at 128.6, 132.9, 136.9 and 140.0 s); textures chosen by colour (the original recolours them with palettes; sub-scene 2's hue is approximate)
-  render(d,R,lt,t){if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
+  render(d,R,lt,t){if(t<132.9){swirl1(d,R,t);return;}if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
     tunnel(d,R,d.tex[SUB[k][1]],(t-SUB[k][0])*TICK);}},
  {name:'balls',t0:143.8,t1:157.8,tex:['raita','ball','ballmid'],
   render(d,R,lt,t){blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},

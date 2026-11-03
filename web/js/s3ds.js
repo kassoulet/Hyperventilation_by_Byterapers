@@ -19,6 +19,7 @@ export function parse3DS(buf){
       else {k.v=[f32(q)];q+=4;}
       keys.push(k);
     }
+    keys.flags=dv.getUint16(b,true);   // track flags: &3 = 0 once, 2 repeat (loop), 3 loop (with the last key equal to the first)
     return keys;
   }
   function chunk(id,b,e){
@@ -74,18 +75,22 @@ function slerp(a,b,t){let d=a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3];let s=1;if(d
   let k0,k1;if(d>0.9995){k0=1-t;k1=t*s;}else{const th=Math.acos(d),sn=Math.sin(th);k0=Math.sin((1-t)*th)/sn;k1=Math.sin(t*th)/sn*s;}
   const r=[a[0]*k0+b[0]*k1,a[1]*k0+b[1]*k1,a[2]*k0+b[2]*k1,a[3]*k0+b[3]*k1];const l=Math.hypot(...r)||1;return r.map(x=>x/l);}
 // Kochanek-Bartels (TCB) Hermite interpolation of a vector track
+const isLoop=(keys)=>(keys.flags&3)===3&&keys.length>=3;
+const wrapT=(keys,f)=>{const L=keys[keys.length-1].f+1;return isLoop(keys)&&f>=0?f%L:f;};
 function tcbTan(keys,i,dim){
   const n=keys.length,p=keys[i],pv=keys[Math.max(i-1,0)].v,nv=keys[Math.min(i+1,n-1)].v,v=p.v;
-  const t=p.t,c=p.c,b=p.b;const tin=[],tout=[];
+  const t=p.t,c=p.c,b=p.b;const tin=[],tout=[],loop=isLoop(keys);
   for(let d=0;d<dim;d++){
     const a=v[d]-pv[d],bb=nv[d]-v[d];
-    if(i===0){tin[d]=tout[d]=bb;}else if(i===n-1){tin[d]=tout[d]=a;}
+    if(loop&&(i===0||i===n-1)){const P=keys[n-2].v[d],N=keys[1].v[d],V=keys[0].v[d],A=V-P,B=N-V;   // looped track: the first/last key use their wrapped neighbours (0x38fc0 wraps the time)
+      tout[d]=tin[d]=0.5*((1-t)*(1+b)*(1+c)*A+(1-t)*(1-b)*(1-c)*B);}
+    else if(i===0){tin[d]=tout[d]=bb;}else if(i===n-1){tin[d]=tout[d]=a;}
     else{tout[d]=0.5*((1-t)*(1+b)*(1+c)*a+(1-t)*(1-b)*(1-c)*bb);tin[d]=0.5*((1-t)*(1+b)*(1-c)*a+(1-t)*(1-b)*(1+c)*bb);}
   }
   return [tin,tout];
 }
 export function evalVec(keys,f,dim,def){
-  if(!keys||!keys.length)return def;const n=keys.length;
+  if(!keys||!keys.length)return def;const n=keys.length;f=wrapT(keys,f);
   if(n===1||f<=keys[0].f)return keys[0].v;
   if(f>=keys[n-1].f)return keys[n-1].v;
   let i=0;while(i<n-2&&f>=keys[i+1].f)i++;
@@ -96,7 +101,7 @@ export function evalVec(keys,f,dim,def){
   const r=[];for(let d=0;d<dim;d++)r[d]=h1*k0.v[d]+h2*k1.v[d]+h3*d0[d]+h4*d1[d];return r;
 }
 export function evalRot(keys,f){
-  if(!keys||!keys.length)return [0,0,0,1];const n=keys.length;
+  if(!keys||!keys.length)return [0,0,0,1];const n=keys.length;f=wrapT(keys,f);
   if(n===1||f<=keys[0].f)return keys[0].q;if(f>=keys[n-1].f)return keys[n-1].q;
   let i=0;while(i<n-2&&f>=keys[i+1].f)i++;const k0=keys[i],k1=keys[i+1];
   return slerp(k0.q,k1.q,(f-k0.f)/(k1.f-k0.f));
