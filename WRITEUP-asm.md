@@ -290,3 +290,15 @@ Blending is per 8x8 block: v = trunc(63 L/(a^2+b^2+L)) & 63 with L = 15000 cos(.
 Sprite records (36 bytes at 0x105dfc, built by script command 1 at 0x222c4) hold a centre position as floats; at start 0x22136-0x22252 compares the stored x / y with the doubles -1.0 and -2.0 (0xbff00000 / 0xc0000000) and replaces them: x = -1 -> w/2 (left-aligned), x = -2 -> 320 - w/2 (right-aligned), y = -1 -> h/2 (top-aligned), y = -2 -> 200 - h/2 (bottom-aligned) (constants 320.0 at 0x10177d and 200.0 at 0x101785). The lyric strips (`thelove.png` 320x130 at y=-1 etc.) therefore sit at the top or bottom of the 320x200 viewport instead of being centred; fixing this took the mean error from 24.7 to 23.7/255.
 
 Open: in the reference run the strips are additive white boxes in some scenes (tunnels, photos at 122-127 s, S.O.S.) but dark boxes (`dst*(1-img)`: black where the strip is white, background kept where the letters are) at 117 s and 147-157 s; the sprite records are identical, so the mode is set at run time (probably through the fader state at 0x12c060-0x12c08c / [0x12c068] = 6,7 handled at 0x22a7f-0x22bf4). Not ported yet.
+
+## 19. Sprite blend modes (v4)
+
+The sprite blitter (`0x42738`, reached through the engine object's vtable +0x64) picks its inner loop from the record's `v3` (2 = alpha/additive family) and `v4`:
+
+| v4 | blitter | effect |
+|----|---------|--------|
+| 0 | `0x53d6c` | palette additive: `dst += pal[texel]·alpha` |
+| 4 | `0x53ecc` | grey additive: `dst += t·alpha` (white strips) |
+| 12 (bit 8 set) | `0x53ff8` | subtractive: `dst -= t·alpha`, clamped at 0 (the black lyric boxes at 115–122 s and 143–157 s) |
+
+`t` is `0x149a18[alpha<<8 | texel]`. Texel 0 is skipped. The table dump from the emulator shows that the image/position columns of the sprite table sit one record behind the kind/alpha/v4 columns: script event 21 draws `itused.png` (320x77) with record 21's v4 = 4. `demo.js` takes the blend class from the next JSON record (`nx`). Mean error 23.7 → 21.8/255.

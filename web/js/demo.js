@@ -36,7 +36,7 @@ export class Demo{
       else if(e.a===4&&st[id])st[id].fin=[e.t,e.c];
       else if(e.a===5&&st[id])st[id].fout=[e.t,e.c];
     }
-    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1)continue;if(sp[id])out.push({id:+id,spr:sp[id],s});}
+    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1)continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
     return out;
   }
   flashAt(t){ // flash_color events: colour, duration in ticks (70 Hz)
@@ -59,13 +59,13 @@ export class Demo{
   }
   drawSprites(t){
     const R=this.R;
-    for(const {spr,s} of this.spritesAt(t)){
+    for(const {spr,nx,s} of this.spritesAt(t)){
       const tex=this.tex[spr.img&&spr.img.replace(/\.png$/i,'')];if(!tex)continue;
-      let a=spr.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
+      let a=nx.kind===2?nx.alpha:spr.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
       if(s.fin){const k=(t-s.fin[0])/(Math.max(s.fin[1],1)/70);a*=Math.min(1,Math.max(0,k));}
       if(s.fout){const k=(t-s.fout[0])/(Math.max(s.fout[1],1)/70);a*=1-Math.min(1,Math.max(0,k));}
       if(a<=0)continue;
-      const add=(spr.flags&4)!==0&&!(tex.w>=320&&tex.h>=200);   // full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
+      const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&!(tex.w>=320&&tex.h>=200);   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
       if(w>=320&&h>=200){x0=0;y0=VY;}
@@ -74,7 +74,8 @@ export class Demo{
       const fb=R.fb,d=tex.d;
       for(let y=0;y<h;y++){const yy=y0+y;if(yy<VY||yy>=VY+VH)continue;
         for(let x=0;x<w;x++){const xx=x0+x;if(xx<0||xx>=W)continue;const px=d[y*w+x],o=yy*W+xx,p=fb[o];
-          if(add){const rr=Math.min(255,(p&255)+(px&255)*a),gg=Math.min(255,((p>>8)&255)+((px>>8)&255)*a),bb=Math.min(255,((p>>16)&255)+((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
+          if(sub){const rr=Math.max(0,(p&255)-(px&255)*a),gg=Math.max(0,((p>>8)&255)-((px>>8)&255)*a),bb=Math.max(0,((p>>16)&255)-((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
+          else if(add){const rr=Math.min(255,(p&255)+(px&255)*a),gg=Math.min(255,((p>>8)&255)+((px>>8)&255)*a),bb=Math.min(255,((p>>16)&255)+((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
           else{const rr=(p&255)*(1-a)+(px&255)*a,gg=((p>>8)&255)*(1-a)+((px>>8)&255)*a,bb=((p>>16)&255)*(1-a)+((px>>16)&255)*a;fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}}}
     }
   }
