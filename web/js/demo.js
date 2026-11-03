@@ -82,6 +82,7 @@ export class Demo{
         for(let x=0;x<w;x++){const xx=x0+x;if(xx<0||xx>=W)continue;const px=d[y*w+x],o=yy*W+xx,p=fb[o];
           if(sub){const rr=Math.max(0,(p&255)-(px&255)*a),gg=Math.max(0,((p>>8)&255)-((px>>8)&255)*a),bb=Math.max(0,((p>>16)&255)-((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
           else if(add){const rr=Math.min(255,(p&255)+(px&255)*a),gg=Math.min(255,((p>>8)&255)+((px>>8)&255)*a),bb=Math.min(255,((p>>16)&255)+((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
+          else if(spr.kind===2&&nx.flags===0&&!(px&0xffffff)){}   // texel 0 is skipped by the blitter (skenenp2.png over the lava tunnel)
           else{const rr=(p&255)*(1-a)+(px&255)*a,gg=((p>>8)&255)*(1-a)+((px>>8)&255)*a,bb=((p>>16)&255)*(1-a)+((px>>16)&255)*a;fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}}}
     }
   }
