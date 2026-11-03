@@ -18,6 +18,7 @@ export class Demo{
     this.mc=await (await fetch(base+'mc.json')).json();   // marching-cubes triangle table of the original (0x109120)
     this.lanim=await (await fetch(base+'lightanim.json')).json();   // animated light ranges sampled from the original
     setPSeeds(await (await fetch(base+'pseeds.json')).json(),await (await fetch(base+'pseeds_flesh.json')).json());
+    this.blur=await (await fetch(base+'blur.json')).json();   // radius of the horizontal box blur the original's flip routine applies on the beat (0x43d00), per call
     initHole(await (await fetch(base+'holefx.json')).json());
     this.lrec=await (await fetch(base+'lights.json')).json();   // the lighter's light list (colour, position, inner^2, outer^2, multiplier) per frame, from the emulator
     this.flares=await (await fetch(base+'flares.json')).json();   // lights flagged for lens flares, per call of the original's 0x31180 (see WRITEUP-asm.md 24)
@@ -63,6 +64,7 @@ export class Demo{
     // 2D layers
     this.drawFlares(t);
     this.drawSprites(t);
+    this.applyBlur(t);
     const f=this.flashAt(t);if(f){const c=f.col,fr=(c>>16)&255,fg=(c>>8)&255,fb=c&255;// colour order in the script is 0xRRGGBB
       const fbp=R.fb;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
     this.u32.set(R.fb);this.ctx.putImageData(this.img,0,0);
@@ -94,6 +96,15 @@ export class Demo{
       if(!(eng&8)||!(sz>10))continue;
       const q=(1-dd)*(sz<20?(sz-10)/10:1);
       for(const [r,g,b,sw,pos] of GHOSTS)blit(lens,159.5-pos*dx,VY+99.5-pos*dy,sw,[Math.trunc(cr/255*q*r),Math.trunc(cg/255*q*g),Math.trunc(cb/255*q*b)],true);}
+  }
+  // 0x43d00 / 0x49bcd: horizontal box blur of every row of the 320x200 viewport, window [x-r, x+r] clipped at the borders and normalised by its size, per channel (truncated); the radius is random per call
+  applyBlur(t){
+    const B=this.blur;if(!B)return;let lo=0,hi=B.length;while(lo<hi){const m=(lo+hi)>>1;if(B[m][0]<t-1e-4)lo=m+1;else hi=m;}
+    const rec=B[lo];if(!rec||rec[0]-t>=0.1||rec[1]<=0)return;const r=rec[1],fb=this.R.fb,tmp=new Uint32Array(W);
+    for(let y=0;y<VH;y++){const o=(VY+y)*W;
+      for(let x=0;x<W;x++){const a=Math.max(0,x-r),b=Math.min(W-1,x+r),n=b-a+1;let sr=0,sg=0,sb=0;for(let k=a;k<=b;k++){const p=fb[o+k];sr+=p&255;sg+=(p>>8)&255;sb+=(p>>16)&255;}
+        const w=Math.fround(1/n);tmp[x]=0xff000000|((Math.trunc(sb*w)&255)<<16)|((Math.trunc(sg*w)&255)<<8)|(Math.trunc(sr*w)&255);}
+      for(let x=0;x<W;x++)fb[o+x]=tmp[x];}
   }
   drawSprites(t){
     const R=this.R;
