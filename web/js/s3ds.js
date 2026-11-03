@@ -22,7 +22,7 @@ export function parse3DS(buf){
     keys.flags=dv.getUint16(b,true);   // track flags: &3 = 0 once, 2 repeat (loop), 3 loop (with the last key equal to the first)
     return keys;
   }
-  const SU=new Float32Array(16384),SV=new Float32Array(16384);
+  const SU=new Float32Array(16384),SV=new Float32Array(16384),SM=new Array(16384).fill(null);
   function chunk(id,b,e){
     switch(id){
       case 0x4D4D: case 0x3D3D: case 0xB000: walk(b,e,chunk); break;
@@ -38,11 +38,13 @@ export function parse3DS(buf){
       case 0xA100: curMat.shading=dv.getUint16(b,true); break;   // 1 flat, 2 gouraud, 3 phong/metal: the original draws shading-1 materials unlit (face flag 0x03 bit 1 clear)
       case 0x4000: {const [n,p]=cstr(b);curObj={name:n,verts:null,faces:null,uv:null,mat:[],xform:null,hidden:false,kind:'mesh'};sc.objects.push(curObj);walk(p,e,chunk);
         // the original's loader keeps the texture coordinates in two static arrays (0x1af8e0/0x1bf8e0) that it never clears: an object without a 0x4140 chunk is drawn with the previous object's coordinates (0x2d655)
-        if(curObj.verts&&!curObj.uv){const n=curObj.verts.length/3,a=new Float32Array(n*2);for(let i=0;i<n;i++){a[i*2]=SU[i];a[i*2+1]=SV[i];}curObj.uv=a;curObj.staleUV=true;}break;}
+        if(curObj.verts&&!curObj.uv){const n=curObj.verts.length/3,a=new Float32Array(n*2);for(let i=0;i<n;i++){a[i*2]=SU[i];a[i*2+1]=SV[i];}curObj.uv=a;curObj.staleUV=true;}
+        if(curObj.faces)curObj.faceMatFull=Array.from({length:curObj.faces.length/3},(_,i)=>SM[i]);   // faces the object never assigned a material keep the previous object's (static array, never cleared)
+        break;}
       case 0x4100: walk(b,e,chunk); break;
       case 0x4110: {const n=dv.getUint16(b,true);const a=new Float32Array(n*3);for(let i=0;i<n*3;i++)a[i]=f32(b+2+i*4);curObj.verts=a;break;}
       case 0x4120: {const n=dv.getUint16(b,true);const a=new Uint16Array(n*3);for(let i=0;i<n;i++){a[i*3]=dv.getUint16(b+2+i*8,true);a[i*3+1]=dv.getUint16(b+4+i*8,true);a[i*3+2]=dv.getUint16(b+6+i*8,true);}curObj.faces=a;walk(b+2+n*8,e,chunk);break;}
-      case 0x4130: {const [n,p]=cstr(b);const c=dv.getUint16(p,true);const fl=[];for(let i=0;i<c;i++)fl.push(dv.getUint16(p+2+i*2,true));curObj.mat.push({name:n,faces:fl});break;}
+      case 0x4130: {const [n,p]=cstr(b);const c=dv.getUint16(p,true);const fl=[];for(let i=0;i<c;i++)fl.push(dv.getUint16(p+2+i*2,true));for(const f of fl)SM[f]=n;curObj.mat.push({name:n,faces:fl});break;}
       case 0x4140: {const n=dv.getUint16(b,true);const a=new Float32Array(n*2);for(let i=0;i<n*2;i++)a[i]=f32(b+2+i*4);for(let i=0;i<n;i++){SU[i]=a[i*2];SV[i]=a[i*2+1];}curObj.uv=a;break;}
       case 0x4160: {const m=new Float32Array(12);for(let i=0;i<12;i++)m[i]=f32(b+i*4);curObj.xform=m;break;}
       // light: the original (0x463ec) uses colour (0..255), inner/outer range (squared), multiplier; a light without range chunks is inert (outer range 0)
