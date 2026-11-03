@@ -269,7 +269,7 @@ export const SCENES=[
   render(d,R,lt,t){const {S,sc}=S3(d,'space2');const f=Math.max(0,t*TICK-7);S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
     drawScene(R,S,cam,d.mats('space2'),{frame:f,t,fogK:d.fogAt(t),cull:false,skip:n=>n==='fd'});}},
  {name:'lava tunnel',t0:30.1,t1:44.3,tex:['forcemao','forcemap'],
-  render(d,R,lt,t){tunnel(d,R,d.tex['forcemap'],lt*TICK);}},
+  render(d,R,lt,t){tunnel(d,R,d.tex['forcemap'],Math.max(0,lt*TICK-7));}},
  {name:'room',t0:44.3,t1:51.1,tex:['seina','plate','lattia','0floor','0reuna','pylvas','seina2','rako','6','hissi'],
   render(d,R,lt,t){const {S}=S3(d,'0room3');const f=Math.trunc(1.2*lt*TICK);S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;drawScene(R,S,cam,d.mats('0room3'),{frame:f,t,fogK:d.fogAt(t)});}},
  {name:'portrait',t0:51.1,t1:58.2,tex:['purple'],
@@ -288,12 +288,12 @@ export const SCENES=[
  {name:'hallu2',t0:86.6,t1:93.7,render(d,R,lt,t){SCENES[5].draw(d,R,t,987+70*lt);}},
  {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,742+70*lt,'Camera03');}},
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
-  render(d,R,lt,t){metaballs(d,R,t,lt);}},
+  render(d,R,lt,t){metaballs(d,R,t,lt-0.1);}},
  {name:'photos',t0:114.9,t1:128.6,render(d,R,lt,t){}},
  {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0','fil','doom','envplane'],
   // four sub-scenes (the original's scene tick restarts at 128.6, 132.9, 136.9 and 140.0 s); textures chosen by colour (the original recolours them with palettes; sub-scene 2's hue is approximate)
-  render(d,R,lt,t){if(t<132.9){swirl1(d,R,t);return;}if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
-    tunnel(d,R,d.tex[SUB[k][1]],(t-SUB[k][0])*TICK);}},
+  render(d,R,lt,t){if(t<132.9){swirl1(d,R,t);return;}if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9-0.1);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9-0.1);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
+    tunnel(d,R,d.tex[SUB[k][1]],Math.max(0,(t-SUB[k][0])*TICK-7));}},
  {name:'balls',t0:143.8,t1:157.8,tex:['raita','ball','ballmid'],
   render(d,R,lt,t){blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.1)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
