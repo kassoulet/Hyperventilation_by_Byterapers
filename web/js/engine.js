@@ -95,6 +95,7 @@ export class Camera{
     const up=Math.abs(this.f[2])>0.999?[0,1,0]:[0,0,1];let r=norm(cross(this.f,up));let u=cross(r,this.f);
     roll=-roll;const c=Math.cos(roll*rad),s=Math.sin(roll*rad);this.r=[r[0]*c+u[0]*s,r[1]*c+u[1]*s,r[2]*c+u[2]*s];this.u=[u[0]*c-r[0]*s,u[1]*c-r[1]*s,u[2]*c-r[2]*s];
     // the engine treats the 3DS FOV as the *vertical* field of the 320x200 viewport (measured: tan(vfov/2)=1.065 for FOV 94.29, horizontal = 1.6x)
+    fov=Math.min(fov,86.4);   // measured from the engine matrix: the original never goes beyond a 86.4 degree field of view (space and tv cameras are 94.29 in the file)
     this.focal0=(W/2)/(Math.tan(fov*rad/2)*0.9882*1.6);this.pfocal=160/Math.tan(fov*rad/2);this.focal=this.pfocal;}   // focal = pfocal for all scenes but space (kept focal0, the first empirical calibration, which fits it ~1/255 better); pfocal: the camera matrix 0x149914 as the particle projector 0x32f10 uses it (x' = xv/tan(fov/2), screen = 159.5 + 160*x'/z)
   toView(p){const d=sub(p,this.pos);return [dot(d,this.r),dot(d,this.u),dot(d,this.f)];}
   dirToView(n){return [dot(n,this.r),dot(n,this.u),dot(n,this.f)];}
