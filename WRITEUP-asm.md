@@ -387,3 +387,7 @@ The balls scene (callback `0x24bac`-style, 143.8-157.8 s) is interrupted from ab
 ## 31. Exact particle streams (hallu/piikit family, 72.5-93.7 s)
 
 Every call of the emitter `0x1e8e8` draws its seven particles from the C library LCG state (`0x28182`: `s = s*0x41c64e6d + 0x3039`). Instead of one derived stream per emitter-frame the port now uses the original's actual seed for each of the three emitters at each of the 212 frames of that scene run (the scene tick runs on from hallu through piikit and hallu2 to piikit2; call `m` has tick `7m`) and the emitter position recorded at the call (`[emitter+0x2c..]`, original axes (x, y-up, z) = 3DS (x, z, y)); both come from `assets/pseeds.json`, dumped from the emulator (seed = state before the first `rand()` of the call). The particle field is then the original's, not just statistically alike: 82.5 s 20 -> 17, 77.5 s 10 -> 9. Mean 13.1 -> 12.8/255.
+
+## 32. Exact spark streams in the flesh scene (172-185.8 s)
+
+The spark emitter `0x23d48` (49 particles per frame, 7 `rand()` each) is seeded like the hallu emitters: `assets/pseeds_flesh.json` holds the LCG state before the first `rand()` of each of the 139 calls (call `m` has tick `7m`, at `172.0 + 0.1 m` s). The spark ages/positions use the call index two frames behind the ball field's (`n - 2`; empirical: 177.5 s 19 -> 14 against `n - 1`), which suggests this scene's page flipping lags two calls; the ball field keeps its own logged clock. Mean 12.83 -> 12.7/255.

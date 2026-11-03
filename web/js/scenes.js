@@ -18,7 +18,7 @@ export function autoMats(d,sc,over){
 // A particle is drawn (additive, texel*(c>>2)>>5 per channel) only while z <= 160*size, as a square of 2*size*160/z pixels. The RNG is the C library LCG; each emitter-frame gets its own stream so the
 // field is a pure function of the frame (seekable); the original draws from one global stream, so only the statistics match.
 const f32=Math.fround,LCG=s=>(Math.imul(s,0x41c64e6d)+0x3039)>>>0;
-let PS=null;export const setPSeeds=(o)=>{PS=o;};   // exact RNG seed and emitter position of every emitter call of the original (72.5-93.7 s), see WRITEUP-asm.md 31
+let PS=null;let PS2=null;export const setPSeeds=(o,o2)=>{PS=o;PS2=o2;};   // exact RNG seed and emitter position of every emitter call of the original (72.5-93.7 s), see WRITEUP-asm.md 31
 function spawnFrame(e,j,pos){const out=[];let st=PS&&PS.seed[e][j]?PS.seed[e][j]>>>0:LCG((e*7919+j*104729+12345)>>>0);if(PS&&PS.pos[e][j]){const q=PS.pos[e][j];pos=[q[0],q[2],q[1]];}const rnd=()=>{st=LCG(st);return (st>>>16)&0x7fff;};
   for(let i=0;i<7;i++){const q=()=>f32(f32(f32((rnd()%1000)*0.4000000059604645)*0.002)-0.4000000059604645);const a=q(),b=q(),c=q();
     const cl=x=>Math.max(0,Math.min(255,x|0));
@@ -265,7 +265,7 @@ function isoBalls(d,n){
 function isoParticles(d,R,n,cam){
   const tex=d.tex['particle'];if(!tex)return;const {Fv,rt,up,fz}=cam,fb=R.fb,zb=R.zb,pd=tex.d,tw=tex.w,th=tex.h;
   for(let f=Math.max(1,n-35);f<=n;f++){const age=n-f+1,life=250-7*age;if(life<=0)continue;
-    const r=lcg((Math.imul(f,0x9e3779b1)^0x5bd1e995)>>>0),ratio=life/250;
+    const r=lcg(PS2&&PS2[f]?PS2[f]:(Math.imul(f,0x9e3779b1)^0x5bd1e995)>>>0),ratio=life/250;
     for(let k=0;k<49;k++){
       const cr=r.next()%1000*0.0002-0.1,cg=r.next()%1000*0.0002-0.1,cb=r.next()%1000*0.0002-0.1;
       const v=[r.next()%1000*0.5-250,r.next()%1000*0.5-250,r.next()%1000*0.5-250];let sz=r.next()%1000*0.005+30;
@@ -294,7 +294,7 @@ function isoScene2(d,R,lt){
     proj(P,nn){const q=[P[0],P[1],P[2]+1000],z=dt(q,Fv);if(z<1)return null;const l=Math.hypot(nn[0],nn[1],nn[2])||1,nv=[dt(nn,rt)/l,dt(nn,up)/l];
       return [W/2-0.5+fz*dt(q,rt)/z,VY+VH/2-0.5-fz*dt(q,up)/z,1/z,nv[0],nv[1]];},
     uv:P=>[4*(1+Math.atan2(P[2],P[0])/Math.PI),4+0.005*P[1]]});
-  isoParticles(d,R,n,{Fv,rt,up,fz});       // flag [obj+0x184]&1: v = 4 + 4*y/800 (0x37a1e)
+  isoParticles(d,R,n-2,{Fv,rt,up,fz});       // flag [obj+0x184]&1: v = 4 + 4*y/800 (0x37a1e)
 }
 const S3=(d,n)=>d.sc3[n];
 export const SCENES=[

@@ -17,7 +17,7 @@ export class Demo{
     this.isoballs=await (await fetch(base+'isoballs.json')).json();
     this.mc=await (await fetch(base+'mc.json')).json();   // marching-cubes triangle table of the original (0x109120)
     this.lanim=await (await fetch(base+'lightanim.json')).json();   // animated light ranges sampled from the original
-    setPSeeds(await (await fetch(base+'pseeds.json')).json());
+    setPSeeds(await (await fetch(base+'pseeds.json')).json(),await (await fetch(base+'pseeds_flesh.json')).json());
     initHole(await (await fetch(base+'holefx.json')).json());
     this.lrec=await (await fetch(base+'lights.json')).json();   // the lighter's light list (colour, position, inner^2, outer^2, multiplier) per frame, from the emulator
     this.flares=await (await fetch(base+'flares.json')).json();   // lights flagged for lens flares, per call of the original's 0x31180 (see WRITEUP-asm.md 24)
