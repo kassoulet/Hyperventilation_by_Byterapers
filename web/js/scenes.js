@@ -12,6 +12,38 @@ export function autoMats(d,sc,over){
     if(!mode){r.r=m.diffuse[0]/255;r.g=m.diffuse[1]/255;r.b=m.diffuse[2]/255;}
     Object.assign(r,(over&&over[name])||{});return cache[name]=r;};
 }
+// The original's particle system (spawn 0x1e8e8, update 0x1ec24, draw 0x32f10 + blitter 0x53563): one emitter per light particle00..02, 7 particles per 7-tick frame at the light's position,
+// life 200 ticks, random velocity in [-5,5)^3, size 3..8 growing 1.02^dt per frame, colour (100,40,25)+128*[-.4,.4)^3 scaled by life/200. Each frame: v += g*dt; v += (0-v)*0.01/rnd; p += v*dt + g*dt^2/2.
+// A particle is drawn (additive, texel*(c>>2)>>5 per channel) only while z <= 160*size, as a square of 2*size*160/z pixels. The RNG is the C library LCG; each emitter-frame gets its own stream so the
+// field is a pure function of the frame (seekable); the original draws from one global stream, so only the statistics match.
+const f32=Math.fround,LCG=s=>(Math.imul(s,0x41c64e6d)+0x3039)>>>0;
+function spawnFrame(e,j,pos){const out=[];let st=LCG((e*7919+j*104729+12345)>>>0);const rnd=()=>{st=LCG(st);return (st>>>16)&0x7fff;};
+  for(let i=0;i<7;i++){const q=()=>f32(f32(f32((rnd()%1000)*0.4000000059604645)*0.002)-0.4000000059604645);const a=q(),b=q(),c=q();
+    const cl=x=>Math.max(0,Math.min(255,x|0));
+    const vel=[0,0,0].map(()=>f32((rnd()%1000)*0.01-5)),r=f32((rnd()&0xffff)*1.52587890625e-5+4.1),size=f32((rnd()%1000)*0.005+3);
+    out.push({p:[pos[0],pos[1],pos[2]],v:vel,inv:f32(1/r),size,life:200,col:[cl(100+a*128),cl(40+b*128),cl(25+c*128)]});}
+  return out;}
+function particleField(S,tick){const n=Math.floor(tick/7+1e-6),dt=f32(0.1),parts=[];
+  for(let j=Math.max(0,n-29);j<=n;j++)for(let e=0;e<3;e++){const pos=S.lightPos('particle0'+e,Math.trunc(j*7*1.2));if(!pos)continue;
+    parts.push(...spawnFrame(e,j,pos).map(q=>(q.j=j,q)));
+    }
+  // every particle spawned at frame j has been updated n-j+1 times
+  const g=[0,-1,0],live=[];
+  for(const q of parts){const k=n-q.j+1;let ok=true;
+    for(let u=0;u<k&&ok;u++){q.life-=7;if(q.life<=0){ok=false;break;}
+      for(let a=0;a<3;a++){q.v[a]=f32(q.v[a]+f32(g[a]*dt));q.v[a]=f32(q.v[a]+f32(f32(f32(0-q.v[a])*0.01)*q.inv));}
+      for(let a=0;a<3;a++){q.p[a]=f32(q.p[a]+f32(q.v[a]*dt));q.p[a]=f32(q.p[a]+f32(f32(dt*dt*0.5)*g[a]));}
+      q.size=f32(q.size*Math.pow(1.02,0.1));}
+    if(ok)live.push(q);}
+  return live;}
+function drawParticles(d,R,S,cam,tick){const tex=d.tex['particle'];if(!tex)return;const fb=R.fb,td=tex.d,tw=tex.w,th=tex.h;
+  for(const q of particleField(S,tick)){const v=cam.toView(q.p),z=v[2];if(z<1.5||z>514.9||q.size*160<z)continue;
+    const sx=159.5+cam.focal*v[0]/z,sy=VY+99.5-cam.focal*v[1]/z,w=2*q.size*160/z,ratio=q.life/200;
+    const L=[q.col[0]*ratio,q.col[1]*ratio,q.col[2]*ratio].map(x=>(x|0)>>2);
+    const x0=Math.max(0,Math.floor(sx-w/2)),x1=Math.min(W-1,Math.ceil(sx+w/2)),y0=Math.max(VY,Math.floor(sy-w/2)),y1=Math.min(VY+VH-1,Math.ceil(sy+w/2));
+    for(let y=y0;y<=y1;y++){const tv=(y+0.5-(sy-w/2))/w;if(tv<0||tv>=1)continue;const ty=(tv*th)|0;
+      for(let x=x0;x<=x1;x++){const tu=(x+0.5-(sx-w/2))/w;if(tu<0||tu>=1)continue;const t=td[ty*tw+((tu*tw)|0)]&255,o=y*W+x,p=fb[o];
+        const r=Math.min(255,(p&255)+((t*L[0])>>5)),gg=Math.min(255,((p>>8)&255)+((t*L[1])>>5)),b=Math.min(255,((p>>16)&255)+((t*L[2])>>5));fb[o]=0xff000000|(b<<16)|(gg<<8)|r;}}}}
 function particles(d,R,S,cam,light,f,n,spread,life,size,col){
   const tex=d.tex['particle'];if(!tex)return;
   for(let i=0;i<n;i++){const fi=f-i*life/n*TICK;const p=S.lightPos(light,fi);if(!p)continue;
@@ -237,12 +269,13 @@ export const SCENES=[
  {name:'blob',t0:58.2,t1:72.55,tex:['keltanai','moykymap','moykyenv'],
   render(d,R,lt,t){blit(R,d.tex['keltanai'],0,t,1,0,0);const {S}=S3(d,'dmoykk2');const f=100+lt*TICK*0.9;S.pose(f);
     const cam=S.camera('Camera01',f)||S.camera(Object.keys(S.sc.cams)[0],f);if(cam)drawScene(R,S,cam,d.mats('dmoykk2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
- {name:'hallu',t0:72.55,t1:83.1,tex:['ruoho','0ikkuna','marmori2','envgreen'],render(d,R,lt,t){this.draw(d,R,t,lt+0.15);},   /* the original's scene tick restarts at 72.4 but its first frame appears at ~72.55 */
-  draw(d,R,t,lt){const {S}=S3(d,'hallu');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
-    drawScene(R,S,cam,d.mats('hallu'),{frame:f,t,fogK:d.fogAt(t)});particles(d,R,S,cam,'particle00',f,70,6,0.9,14,[1,.65,.45]);}},
+ {name:'hallu',t0:72.55,t1:83.1,tex:['ruoho','0ikkuna','marmori2','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*(lt+0.15));},   /* the original's scene tick restarts at 72.4 but its first frame appears at ~72.55 */
+  draw(d,R,t,tick){const {S}=S3(d,'hallu');const f=Math.trunc(tick*1.2);   // the callback 0x1e7d8 sets frame = trunc(1.2*scene tick)
+   S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
+    drawScene(R,S,cam,d.mats('hallu'),{frame:f,t,fogK:d.fogAt(t)});drawParticles(d,R,S,cam,tick);}},
  {name:'piikit',t0:83.1,t1:86.6,tex:['kuvio','ruoho','envgreen'],render(d,R,lt,t){this.draw(d,R,t,lt);},
   draw(d,R,t,lt){const {S}=S3(d,'piikit2');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;drawScene(R,S,cam,d.mats('piikit2'),{frame:f,t,fogK:d.fogAt(t)});}},
- {name:'hallu2',t0:86.6,t1:93.7,render(d,R,lt,t){SCENES[5].draw(d,R,t,lt+4);}},
+ {name:'hallu2',t0:86.6,t1:93.7,render(d,R,lt,t){SCENES[5].draw(d,R,t,994+70*lt);}},
  {name:'piikit2',t0:93.7,t1:100.7,render(d,R,lt,t){SCENES[6].draw(d,R,t,lt+3);}},
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt);}},
