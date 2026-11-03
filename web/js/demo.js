@@ -26,6 +26,7 @@ export class Demo{
     for(const S of SCENES)if(S.init)S.init(this);
   }
   // sprite state at time t from the script events (start/stop/fades)
+  songRow(t){const R=this.xm.rows;let lo=0,hi=R.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(R[m][2]<=t)lo=m;else hi=m-1;}return R[lo][0]*64+R[lo][1];}   // [0x10eb78]*64+[0x10eb80]
   spritesAt(t){
     const ev=this.script.events,sp=this.script.sprites,out=[];
     const st={};

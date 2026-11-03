@@ -295,9 +295,11 @@ export const SCENES=[
   render(d,R,lt,t){if(t<132.9){swirl1(d,R,t);return;}if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
     tunnel(d,R,d.tex[SUB[k][1]],(t-SUB[k][0])*TICK);}},
  {name:'balls',t0:143.8,t1:157.8,tex:['raita','ball','ballmid'],
-  render(d,R,lt,t){blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
+  render(d,R,lt,t){blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.1)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
+   S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
-  render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=lt*TICK;S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('tvfin'),{frame:f,t,fogK:d.fogAt(t),cull:false});particles(d,R,S,cam||null,'particle03',f,0,1,1,1);}},
+  render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.1)*TICK);   // camera frame = scene tick (tick 322 at 162.5 s: exact camera match)
+   S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('tvfin'),{frame:f,t,fogK:d.fogAt(t),cull:false});particles(d,R,S,cam||null,'particle03',f,0,1,1,1);}},
  {name:'flesh',t0:172.0,t1:185.8,tex:['metamap0','metaenv0','bumpidx'],
   render(d,R,lt,t){isoScene2(d,R,lt);}},
  {name:'end',t0:185.8,t1:300,render(d,R,lt,t){R.clear(0xffffff);}},
