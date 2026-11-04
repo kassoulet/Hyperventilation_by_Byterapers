@@ -4,6 +4,7 @@ import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engi
 import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;
+const BLO=0.3;   // fitted: the beat blur seen in the reference frames is the one of the call ~0.3 s earlier (72.5 s 17 -> 14; single-frame fit)
 let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
 //   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
 const GHOSTS=[[35,10,53,20,3.1],[18,22,53,16,1.9],[52,2,10,24,1.3],[12,50,10,12,0.7],[3,24,27,14,0.34],[33,24,47,32,-0.2],[20,50,10,16,-0.35],[50,3,26,20,-0.9],[5,21,40,28,-1.5],[35,11,20,48,-2.3]];   // r,g,b multiplier, size, position along the axis (0x106b08, stride 0x14)
@@ -100,7 +101,7 @@ export class Demo{
       for(const [r,g,b,sw,pos] of GHOSTS)blit(lens,159.5-pos*dx,VY+99.5-pos*dy,sw,[Math.trunc(cr/255*q*r),Math.trunc(cg/255*q*g),Math.trunc(cb/255*q*b)],true);}
   }
   // 0x43d00 / 0x49bcd: horizontal box blur of every row of the 320x200 viewport, window [x-r, x+r] clipped at the borders and normalised by its size, per channel (truncated); the radius is random per call
-  applyBlur(t){
+  applyBlur(t){t-=BLO;
     const B=this.blur;if(!B)return;let lo=0,hi=B.length;while(lo<hi){const m=(lo+hi)>>1;if(B[m][0]<t-1e-4)lo=m+1;else hi=m;}
     const rec=B[lo];if(!rec||rec[0]-t>=0.1||rec[1]<=0)return;const r=rec[1],fb=this.R.fb,tmp=new Uint32Array(W);
     for(let y=0;y<VH;y++){const o=(VY+y)*W;
