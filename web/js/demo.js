@@ -4,7 +4,8 @@ import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engi
 import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;
-const FD=0.19;   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
+let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
+//   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
 const GHOSTS=[[35,10,53,20,3.1],[18,22,53,16,1.9],[52,2,10,24,1.3],[12,50,10,12,0.7],[3,24,27,14,0.34],[33,24,47,32,-0.2],[20,50,10,16,-0.35],[50,3,26,20,-0.9],[5,21,40,28,-1.5],[35,11,20,48,-2.3]];   // r,g,b multiplier, size, position along the axis (0x106b08, stride 0x14)
 export class Demo{
   constructor(){this.R=new Raster();this.tex={};this.sc3={};this._m={};this.script=null;this.xm=null;this.t=0;this.cv=document.createElement('canvas');this.cv.width=W;this.cv.height=H;this.ctx=this.cv.getContext('2d');this.img=this.ctx.createImageData(W,H);this.u32=new Uint32Array(this.img.data.buffer);}
@@ -35,6 +36,7 @@ export class Demo{
   // sprite state at time t from the script events (start/stop/fades)
   songRow(t){const R=this.xm.rows;let lo=0,hi=R.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(R[m][2]<=t)lo=m;else hi=m-1;}return R[lo][0]*64+R[lo][1];}   // [0x10eb78]*64+[0x10eb80]
   spritesAt(t){
+    FD=t>157.8?FDTV:0.19;
     const ev=this.script.events,sp=this.script.sprites,out=[];
     const st={};
     for(const e of ev){
@@ -69,7 +71,7 @@ export class Demo{
       const fbp=R.fb;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
     this.u32.set(R.fb);this.ctx.putImageData(this.img,0,0);
   }
-  fadeOf(id,t){const o=this.spritesAt(t).find(x=>x.id===id);if(!o)return 0;let a=o.nx.alpha;const s=o.s;
+  fadeOf(id,t){FD=t>157.8?FDTV:0.19;const o=this.spritesAt(t).find(x=>x.id===id);if(!o)return 0;let a=o.nx.alpha;const s=o.s;
     if(s.fin)a*=Math.min(1,Math.max(0,(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70)));if(s.fout)a*=1-Math.min(1,Math.max(0,(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70)));return a;}
   // Lens flares (0x31180): per flagged light a glow sprite (additive, colour*alpha) and, when the engine flag 8 is set and the glow is big enough, ten flat-coloured hexagons along the line through the screen centre.
   drawFlares(t){
