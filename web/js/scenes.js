@@ -330,7 +330,7 @@ export const SCENES=[
     tunnel(d,R,d.tex[SUB[k][1]],Math.max(0,(t-SUB[k][0])*TICK-7));}},
  {name:'balls',t0:143.8,t1:157.8,tex:['raita','ball','ballmid','mefisidx','forcemaoidx','mefis','forcemao'],
   render(d,R,lt,t){if(t>=147.55&&t<150.25){force(d,R,t-147.3-0.1);return;}   // 147.3-150.2 s: the callback 0x25d80 (the halftone swirl of 136.9-139.8) takes over, its tick restarting at 147.3 s
-   blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.1)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
+   blit(R,d.tex['raita'],0,t,1.15,0,0);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.2)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
   render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.1)*TICK);   // camera frame = scene tick (tick 322 at 162.5 s: exact camera match)
