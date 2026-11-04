@@ -47,7 +47,7 @@ export class Demo{
       else if(e.a===4&&st[id])st[id].fin=[e.t,e.c];
       else if(e.a===5&&st[id])st[id].fout=[e.t,e.c];
     }
-    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1+FD)continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
+    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1+(t>142.8&&t<157.8?0.4:FD))continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
     return out;
   }
   flashAt(t){ // flash_color events: colour, duration in ticks (70 Hz)
@@ -65,7 +65,7 @@ export class Demo{
     if(S)S.render(this,R,t-S.t0,t);
     // 2D layers
     this.drawFlares(t);
-    this.drawSprites(t);
+    if(!(S&&S.under&&t<147.55))this.drawSprites(t);
     this.applyBlur(t);
     const f=this.flashAt(t);if(f){const c=f.col,fr=(c>>16)&255,fg=(c>>8)&255,fb=c&255;// colour order in the script is 0xRRGGBB
       const fbp=R.fb;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
@@ -108,7 +108,7 @@ export class Demo{
         const w=Math.fround(1/n);tmp[x]=0xff000000|((Math.trunc(sb*w)&255)<<16)|((Math.trunc(sg*w)&255)<<8)|(Math.trunc(sr*w)&255);}
       for(let x=0;x<W;x++)fb[o+x]=tmp[x];}
   }
-  drawSprites(t){
+  drawSprites(t,sa=1){
     const R=this.R;
     for(const {spr,nx,s} of this.spritesAt(t)){
       const tex=this.tex[spr.img&&spr.img.replace(/\.png$/i,'')];if(!tex)continue;
@@ -116,7 +116,7 @@ export class Demo{
       let a=nx.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
       if(s.fin){const k=(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70);a*=Math.min(1,Math.max(0,k));}
       if(s.fout){const k=(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70);a*=1-Math.min(1,Math.max(0,k));}
-      if(a<=0)continue;
+      a*=sa;if(a<=0)continue;
       const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&!(tex.w>=320&&tex.h>=200);   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
