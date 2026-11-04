@@ -116,7 +116,7 @@ function ballField(bp,EXT,NG,HG,Rb){
 const rowAt=(d,t)=>{const rows=d.xm.rows;let lo=0,hi=rows.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(rows[m][2]<=t)lo=m;else hi=m-1;}return rows[lo];};
 function metaballs(d,R,t,lt){
   const bg=d.tex['metanain'],fb=R.fb;fb.fill(0xff000000);for(let y=0;y<200;y++)for(let x=150;x<W;x++)fb[(y+VY)*W+x]=bg.d[y*bg.w+x]|0xff000000;
-  const rw=rowAt(d,t),f=(rw[0]*64+rw[1]-0x740)*10,tk=Math.floor(lt*70),md=x=>((x%1024)+1024)%1024;
+  const rw=rowAt(d,t-0.3),f=(rw[0]*64+rw[1]-0x740)*10,tk=Math.floor(lt*70),md=x=>((x%1024)+1024)%1024;
   const E=EXT*0.4,bp=[];
   for(let i=0;i<5;i++){const A=md(MB1[i]*tk),B=md(MB2[i]*tk),C=md(MB2[i]*tk),k=Math.PI/512;
     bp.push([E*Math.sin(((A+B+C)&1023)*k),E*Math.cos(((A+C)&1023)*k),E*Math.sin(((B-(C>>1))&1023)*k)]);}
