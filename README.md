@@ -16,7 +16,7 @@ Tests: `node tools/shot.mjs OUTDIR t1 t2 ...` (frames of the port in headless Ch
   of the original; `CKPT=dir` writes checkpoints; frames of the original in `re/golden/`), `lightdump.py` (logs the original's per-frame light lists, input of `tools/bake_lights.py`), `boot_trace.py` (which scene loads which files), `prof.py` (hot blocks), `ds.py`/`xref.py`/`callers.py` (disassembly helpers),
   `xm_times.json`, `data.lst`, `catalogue.md`, `dat/` (the 104 files extracted from Hyper.dat).
 * `tools/` `bake_lights.py` (light-range animation -> `web/assets/lightanim.json`), `script_dump.py` (decodes the in-binary script and sprite tables), `xmtime.py` (XM order/row -> seconds), `parse3ds.py`, `kfinfo.py`, `catalogue.py`, `sheet.py`, `cmp.py`, `shot.mjs`, `perf.mjs`, `uitest.mjs`.
-* `web/` the player. `WRITEUP-asm.md` (9 verified asm snippets), `WRITEUP-effects.md` (timeline, engine, catalogue of objects/scenes), `shots/` contact sheets.
+* `web/` the player; `web/viewer3d.html` an interactive 3D viewer of the scenes; `figures/` the figures of the write-ups (`tools/make_figures.py`, `tools/export_meshes.mjs`). `WRITEUP-asm.md` (9 verified asm snippets), `WRITEUP-effects.md` (timeline, engine, catalogue of objects/scenes), `shots/` contact sheets.
 
 Hyper.dat = "(B)ZIP": 16-byte header (magic, 0x102, count = 104) then 0x30-byte entries `{name[0x20], offset, size, size, 0}`; files stored raw (PNG, 3DS, `data.lst`). `lens.png` is a BMP (converted to PNG in `web/assets`); `PALLO.PNG` is a 3DS.
 

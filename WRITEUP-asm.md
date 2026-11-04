@@ -339,6 +339,11 @@ The camera is `Camera01` of `space2.3ds` at 3DS frame = scene tick, which lags t
 
 ## 24. Lens flares (0x31180) and scene ticks
 
+![lens-flare ghosts](figures/lens_flare.png)
+
+*Figure: the ten hexagon ghosts sit on the line through the screen centre (positions `p_k`, sizes and colour multipliers from the table at `0x106b08`).*
+
+
 `0x31180` runs after the particle stage in space, room, hallu/piikit and balls. For each light with `[L+0xe8] != 0` (lights named `flash*`, the emitter lights with bit 4, hallu's glow lights): the light is projected like a particle (`x = 159.5 + f*xv/z`, `y = 99.5 - f*yv/z`, `f = 160/tan(fov/2)`), tested against the frustum (`0x44020`: near, far, |x'| <= z, |y'| <= z) and against the 16-bit depth buffer (`0x2b6a8`: visible if the stored depth, `z*[0x149968]>>6` units, is larger than the light's). Then, with `alpha = [L+0xf0]` scaled by the depth fade (`1 - 0.5*z*k` when the fog flag `0x1499e8` is set; `1 - ((z-near)*0.9/(far-near)+0.1)` when `[0x1498d4]` bit 4 is set, as in the room):
 - bit 1 of `[L+0xe8]`: a glow sprite (`glow.png`, blitter `0x53563`, colour bytes `trunc(col*alpha)`), side `2*[L+0xd8]*160/z` (`[L+0xd8]` is the light's inner range), skipped if > 512;
 - engine flag 8 (`[eng+0x2c]`) and `s = side*[L+0xe0]*alpha > 10`: ten hexagons of `lens.png`, blitter `0x536a0` (flat colour added wherever the texel is not 0). Hexagon `k` sits at `159.5 - p_k*(159.5 - sx)`, `99.5 - p_k*(99.5 - sy)`, has side `s_k` and colour `trunc(col/255 * q * m_k)`, with `q = (1 - (dx^2+dy^2)/(2*160^2)) * min(1, (s-10)/10)`. The ten rows (`m_r, m_g, m_b, s_k, p_k`, table `0x106b08`, stride 0x14) are in `demo.js` (`GHOSTS`);
@@ -359,6 +364,11 @@ Scene ticks recorded with the flares: the room's 3DS frame is `trunc(1.2*tick)` 
 The scene tick `[0x10eb9c]` read at a frame boundary (what the reference harness logs) is `70 * (t - scene start)`, but the frame shown at that boundary was rendered one 7-tick frame earlier, so every tick-driven effect uses `tick - 7` (measured: space camera, room, hallu, piikit, flares; confirmed with boundary ticks 168/518/868 at 32.5/37.5/42.5 s for the lava tunnel, 112 at 134.5 for swirl 2, 42 at 137.5 for the force scene, 175 at 142.5 for the last tunnel, 126/476/826 for the metaballs). Applying it to the lava tunnel, swirl 2, the force scene, the last tunnel sub-scene and the metaballs: 32.5 s 17 -> 3, 137.5 s 30 -> 17, 42.5 s 18 -> 14. Mean 14.7 -> 13.9/255. (The blob scene's object frame and the flesh scene's frame counter do not change measurably.)
 
 ## 27. The photos scene (114.9-128.6 s) hides a ray-traced two-layer effect (0x20bc4) - not ported yet
+
+![photos underlay](figures/hole_effect.png)
+
+*Figure: the two 256x256 textures, the two layers produced by the cell filler from the ray-traced grids (emulator dump at 122.4 s) and the port's composite at 122.5 s.*
+
 
 Every frame of the photos scene calls the callback at `0x20bc4` before the photo sprites are drawn (the cell filler `0x34db4` runs twice per frame, `0x35e4c` blends the photos). It is the same effect the last swirl sub-scene (140-143.8 s) is made of, and it is why the reference frames around 122 s show a smeared, whitish copy of the photo (error 27 at 122.5 s):
 
@@ -408,11 +418,21 @@ Comparing the original's camera matrix (`0x149914`, row norm = 1/tan(FOV/2)) wit
 
 ## 36. The cavern sphere follows the camera; open-track first-key tangent (space scene)
 
+![space 3D](figures/space_3d.png)
+
+*Figure (3D): left, the 3DS scene as exported (the `lock` sphere at its file position, the ring of arches, the camera path); right, the same with the sphere centred on the camera plus the 3D points recovered from the original's scanlines at 2.5 s (red): they lie on a sphere around the camera. The interactive version is `web/viewer3d.html`.*
+
+![camera tangent](figures/camera_tangent.png)
+
+
 Hooking the polygon walker (`0x5b949`, the second copy of the scanline loop; its globals at the start of a scanline: left/right edge `0x21bc48/0x21bc40` (16.16), destination `0x21bd88`, `u/z`, `v/z`, `1/z` at the left edge `0x21bca8/0x21bcac/0x21bcb8` and their per-pixel steps `0x21bd28/0x21bd2c/0x21bd38`) at the call whose frame the reference shows at 2.5 s, and turning each scanline segment into a 3D point with the engine's own camera matrix, the wall of the space scene is a **sphere centred on the camera** (distance from the camera 4637 +/- 119 over 1335 points; a sphere fitted to them has radius 4214, residual 91) - not the 3DS object `lock` sitting at its file position (-151, 0, 5000), whose wall was 15-30% too near on one side and too far on the other. The original moves that object with the camera; the port translates `lock` by `cam.pos - (-150.7, 0.1, 5000)` after posing. Space frames: 2.5 s 18 -> 10, 12.5 s 14 -> 10, 17.5 s 12 -> 7, 22.5 s 19 -> 10; mean 12.5 -> 11.6/255. (This is also the "haze": the reference background looked softer only because it was a different, farther surface.)
 
 Camera path: the first key of an open TCB position track uses the tangent `1.5*(P1-P0) - 0.5*tin(key 1)` (and symmetrically `1.5*(Pn-Pn-1) - 0.5*tout(key n-2)` for the last key) instead of the plain difference: the camera position and basis then match the engine matrix to 0.03 units at ticks 7..413 (error 14 units before).
 
 ## 37. The beat blur (0x43d00 / 0x49bcd) and the double-buffered pages
+
+![blur timeline](figures/blur_timeline.png)
+
 
 Between frames, the flip routine (`0x296fc...`, the code at `0x29947`) runs a horizontal box blur over the whole 320x200 frame while a timer (`[ebp+0x1c]`, decremented by the frame step) is positive: `0x43d00(buffer, radius, 320, 200)` calls the row blur `0x49bcd` for every row. The radius is `rand() % (param/4)`, drawn per call; row blur = running sums per channel over the window `[x-r, x+r]`, clipped at the borders and normalised by the window size (weights `1/(2r+1)` inside, the table at `0x16a214` at the edges, single-precision, `fistp` truncation). The script triggers it in bursts of 9 calls every ~1.75 s (59.4-72.5 s over the blob scene, 103.5-113.1 s over the metaballs, 114.1-115.8 s at the photos), radius up to 25 pixels, decaying to 0; the reference frames at 105.45, 107.05, 107.45 are visibly smeared. The 144 radii come from the emulator (`assets/blur.json`, call time + radius) and `Demo.applyBlur` runs after all other layers. 107.5 s 8 -> 4, 112.5 s 9 -> 8; mean 11.63 -> 11.47/255.
 

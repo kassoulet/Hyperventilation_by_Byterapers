@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HYPERVENTILATION 3D scenes</title>
+<style>
+html,body{margin:0;height:100%;background:#0b0b10;color:#ddd;font:13px system-ui,sans-serif}
+#ui{position:fixed;left:10px;top:10px;background:#000a;padding:8px 10px;border-radius:6px;max-width:300px;z-index:2}
+#ui label{display:block;margin:4px 0}select,input[type=range]{width:100%}
+#info{position:fixed;left:10px;bottom:10px;color:#9ab;font-size:12px;max-width:420px}
+a{color:#8cf}
+</style></head><body>
+<div id="ui">
+ <b>The 3DS scenes of the demo</b>
+ <label>Scene <select id="scene"></select></label>
+ <label><input type="checkbox" id="wire"> wireframe</label>
+ <label><input type="checkbox" id="path" checked> Camera01 path</label>
+ <label><input type="checkbox" id="lights" checked> lights</label>
+ <label id="followrow" style="display:none"><input type="checkbox" id="follow" checked> cavern sphere follows the camera (as in the original)</label>
+ <label id="framerow" style="display:none">camera frame <span id="fv">0</span><input type="range" id="frame" min="0" max="1600" step="20" value="168"></label>
+ <div><a href="../WRITEUP-effects.md">write-up</a> · <a href="index.html">player</a></div>
+</div>
+<div id="info">drag: orbit · wheel: zoom · right drag: pan. Meshes are the 3DS files posed at one frame (z is the tunnel axis in the space scene).</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(devicePixelRatio);R.setSize(innerWidth,innerHeight);document.body.appendChild(R.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0b0b10);
+const cam=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,1,200000);cam.up.set(0,0,1);
+const ctl=new THREE.OrbitControls(cam,R.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,0.6));const dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(1,-1,2);scene.add(dl);
+const PAL=[0x4c78a8,0xf58518,0x54a24b,0xe45756,0x72b7b2,0xeeca3b,0xb279a2,0xff9da6,0x9d755d];
+let D=null,group=new THREE.Group();scene.add(group);
+const sel=document.getElementById('scene');
+fetch('assets/meshes.json').then(r=>r.json()).then(j=>{D=j;for(const k of Object.keys(D)){const o=document.createElement('option');o.value=k;o.textContent=k;sel.appendChild(o);}sel.value='space2';build();});
+function camPos(name,f){const p=D[name].cams.Camera01;if(!p)return null;let best=p[0];for(const q of p)if(Math.abs(q[0]-f)<Math.abs(best[0]-f))best=q;return best.slice(1);}
+function build(){
+  scene.remove(group);group=new THREE.Group();scene.add(group);const n=sel.value,S=D[n],wire=document.getElementById('wire').checked;
+  const isSpace=n==='space2';document.getElementById('followrow').style.display=document.getElementById('framerow').style.display=isSpace?'block':'none';
+  const f=+document.getElementById('frame').value;document.getElementById('fv').textContent=f;
+  const follow=isSpace&&document.getElementById('follow').checked,cp=isSpace?camPos(n,f):null;
+  let box=new THREE.Box3();let ci=0;
+  for(const m of S.meshes){
+    const g=new THREE.BufferGeometry();const v=Float32Array.from(m.v);
+    if(follow&&m.name==='lock'&&cp){for(let i=0;i<v.length;i+=3){v[i]+=cp[0]+150.7;v[i+1]+=cp[1]-0.1;v[i+2]+=cp[2]-5000;}}
+    g.setAttribute('position',new THREE.BufferAttribute(v,3));g.setIndex(m.f);g.computeVertexNormals();
+    if(isSpace&&m.name==='fd')continue;
+    const mat=new THREE.MeshStandardMaterial({color:PAL[(ci++)%PAL.length],wireframe:wire,side:THREE.DoubleSide,transparent:isSpace&&m.name==='lock',opacity:isSpace&&m.name==='lock'?0.18:1,flatShading:true});
+    const mesh=new THREE.Mesh(g,mat);group.add(mesh);box.expandByObject(mesh);
+  }
+  if(document.getElementById('path').checked&&S.cams.Camera01){const pts=S.cams.Camera01.map(q=>new THREE.Vector3(q[1],q[2],q[3]));group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0xff4444})));
+    if(cp){const s=new THREE.Mesh(new THREE.SphereGeometry(60,12,8),new THREE.MeshBasicMaterial({color:0xffffff}));s.position.set(cp[0],cp[1],cp[2]);group.add(s);}}
+  if(document.getElementById('lights').checked)for(const l of S.lights){const s=new THREE.Mesh(new THREE.SphereGeometry(25,8,6),new THREE.MeshBasicMaterial({color:new THREE.Color(l.c[0]/255,l.c[1]/255,l.c[2]/255)}));s.position.set(l.p[0],l.p[1],l.p[2]);group.add(s);}
+  const c=new THREE.Vector3(),sz=new THREE.Vector3();box.getCenter(c);box.getSize(sz);const r=Math.max(sz.x,sz.y,sz.z)||1000;
+  if(!build.once||build.scene!==n){cam.position.set(c.x+r*0.9,c.y-r*0.9,c.z+r*0.7);ctl.target.copy(c);build.once=true;build.scene=n;}
+}
+for(const id of ['scene','wire','path','lights','follow','frame'])document.getElementById(id).addEventListener('input',()=>D&&build());
+addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+(function loop(){requestAnimationFrame(loop);ctl.update();R.render(scene,cam);})();
+</script></body></html>
