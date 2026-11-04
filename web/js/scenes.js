@@ -84,7 +84,7 @@ function tunnel(d,R,tex,tick,att,shMax,fOff,gam,fDiv){
 const P1=1300,P2=1030,FX=0.0212*Math.PI,FY=0.0301*Math.PI;
 const filAtt=(T)=>[[40*Math.cos((T+P1+40)*FX)+160,40*Math.cos((T+P2+40)*FY)+100,Math.fround(Math.cos((T+200)*0.02)*150*16777216-150)],
   [40*Math.cos((T+P1+20)*FX)+160,40*Math.cos((T+P2+20)*FY)+100,Math.fround(Math.cos(T*0.03)*180*16777216-140)]];
-function swirl1(d,R,t){const tick=Math.floor(70*(t-128.6));tunnel(d,R,d.tex['fil'],tick,filAtt,31.99999,700,false,14000);
+function swirl1(d,R,t){const tick=Math.floor(70*(t-128.6)),gt=Math.floor(63*(t-128.39)+1e-6);tunnel(d,R,d.tex['fil'],gt,filAtt,31.99999,700,false,14000);   // the grid clock drifts 7 ticks per second behind the 70 Hz one in the reference frames (offsets 0/-7/-14 ticks at 130.5/131.5/132.5 s)
   const {S}=S3(d,'morph');S.pose(tick);const cam=S.camera('Camera01',tick);if(cam){cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('morph'),{frame:tick,t,cull:false,unlit:true});}}
 function blit(R,tex,sc,t,zoom,ox,oy){ // full-viewport image with zoom/pan
   const fb=R.fb,d=tex.d;for(let y=0;y<VH;y++){const v=((y-100)/zoom+100+oy)/tex.h;const ty=Math.min(tex.h-1,Math.max(0,(v*tex.h)|0));
