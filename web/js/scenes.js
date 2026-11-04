@@ -18,7 +18,7 @@ export function autoMats(d,sc,over){
 // A particle is drawn (additive, texel*(c>>2)>>5 per channel) only while z <= 160*size, as a square of 2*size*160/z pixels. The RNG is the C library LCG; each emitter-frame gets its own stream so the
 // field is a pure function of the frame (seekable); the original draws from one global stream, so only the statistics match.
 const f32=Math.fround,LCG=s=>(Math.imul(s,0x41c64e6d)+0x3039)>>>0;
-let PS=null;let PS2=null;export const setPSeeds=(o,o2)=>{PS=o;PS2=o2;};   // exact RNG seed and emitter position of every emitter call of the original (72.5-93.7 s), see WRITEUP-asm.md 31
+let PS=null;let PS2=null;let PS3=null;export const setPSeeds=(o,o2,o3)=>{PS=o;PS2=o2;PS3=o3;};   // exact RNG seed and emitter position of every emitter call of the original (72.5-93.7 s), see WRITEUP-asm.md 31
 function spawnFrame(e,j,pos){const out=[];let st=PS&&PS.seed[e][j]?PS.seed[e][j]>>>0:LCG((e*7919+j*104729+12345)>>>0);if(PS&&PS.pos[e][j]){const q=PS.pos[e][j];pos=[q[0],q[2],q[1]];}const rnd=()=>{st=LCG(st);return (st>>>16)&0x7fff;};
   for(let i=0;i<7;i++){const q=()=>f32(f32(f32((rnd()%1000)*0.4000000059604645)*0.002)-0.4000000059604645);const a=q(),b=q(),c=q();
     const cl=x=>Math.max(0,Math.min(255,x|0));
@@ -29,8 +29,9 @@ function particleField(S,tick){const n=Math.floor(tick/7+1e-6),dt=f32(0.1),parts
   for(let j=Math.max(0,n-29);j<=n;j++)for(let e=0;e<3;e++){const pos=S.lightPos('particle0'+e,Math.trunc(j*7*1.2));if(!pos)continue;
     parts.push(...spawnFrame(e,j,pos).map(q=>(q.j=j,q)));
     }
-  // every particle spawned at frame j has been updated n-j+1 times
-  const g=[0,0,-1],live=[];   // the original's y axis is up = 3DS z
+  return ageParts(parts,n,[0,0,-1]);}
+// every particle spawned at frame j has been updated n-j+1 times
+function ageParts(parts,n,g){const dt=f32(0.1),live=[];
   for(const q of parts){const k=n-q.j+1;let ok=true;
     for(let u=0;u<k&&ok;u++){q.life-=7;if(q.life<=0){ok=false;break;}
       for(let a=0;a<3;a++){q.v[a]=f32(q.v[a]+f32(g[a]*dt));q.v[a]=f32(q.v[a]+f32(f32(f32(0-q.v[a])*0.01)*q.inv));}
@@ -38,9 +39,14 @@ function particleField(S,tick){const n=Math.floor(tick/7+1e-6),dt=f32(0.1),parts
       q.size=f32(q.size*Math.pow(1.02,0.1));}
     if(ok)live.push(q);}
   return live;}
-function drawParticles(d,R,S,cam,tick){const tex=d.tex['particle'];if(!tex)return;const fb=R.fb,td=tex.d,tw=tex.w,th=tex.h;
-  for(const q of particleField(S,tick)){const v=cam.toView(q.p),z=v[2];if(z<1.5||z>514.9||q.size*160<z)continue;
-    const sx=159.5+cam.pfocal*v[0]/z,sy=VY+99.5-cam.pfocal*v[1]/z,w=2*q.size*160/z,ratio=q.life/200;
+// the tv scene's emitter (0x21800): 14 particles per frame, exact initial state dumped from the emulator (pseeds_tv.json), life 120, size 2, gravity +40 on the original's y
+function tvField(n){const live=[],parts=[];if(!PS3)return parts;
+  for(let j=Math.max(PS3.j0,n-17);j<=Math.min(n,PS3.j0+PS3.p.length-1);j++)for(const e of PS3.p[j-PS3.j0])
+    parts.push({p:[e[0],e[2],e[1]],v:[e[3],e[5],e[4]],inv:f32(1/e[6]),size:2,life:120,l0:120,col:[e[7],e[8],e[9]],j});
+  return ageParts(parts,n,[0,0,40]);}
+function drawParticles(d,R,S,cam,tick,field){const tex=d.tex['particle'];if(!tex)return;const fb=R.fb,td=tex.d,tw=tex.w,th=tex.h;
+  for(const q of field||particleField(S,tick)){const v=cam.toView(q.p),z=v[2];if(z<1.5||z>514.9||q.size*160<z)continue;
+    const sx=159.5+cam.pfocal*v[0]/z,sy=VY+99.5-cam.pfocal*v[1]/z,w=2*q.size*160/z,ratio=q.life/(q.l0||200);
     const L=[q.col[0]*ratio,q.col[1]*ratio,q.col[2]*ratio].map(x=>(x|0)>>2);
     const x0=Math.max(0,Math.floor(sx-w/2)),x1=Math.min(W-1,Math.ceil(sx+w/2)),y0=Math.max(VY,Math.floor(sy-w/2)),y1=Math.min(VY+VH-1,Math.ceil(sy+w/2));
     for(let y=y0;y<=y1;y++){const tv=(y+0.5-(sy-w/2))/w;if(tv<0||tv>=1)continue;const ty=(tv*th)|0;
@@ -282,6 +288,7 @@ function isoParticles(d,R,n,cam){
           fb[o]=0xff000000|(Math.min(255,((c>>16)&255)+Math.min(255,(t*tb)>>5))<<16)|(Math.min(255,((c>>8)&255)+Math.min(255,(t*tg)>>5))<<8)|Math.min(255,(c&255)+Math.min(255,(t*tr)>>5));}}
     }}
 }
+const TVLAG=1;
 const dt3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 function isoScene2(d,R,lt){
   const fb=R.fb;fb.fill(0xff000000);
@@ -334,7 +341,7 @@ export const SCENES=[
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
   render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.1)*TICK);   // camera frame = scene tick (tick 322 at 162.5 s: exact camera match)
-   S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('tvfin'),{frame:f,t,fogK:d.fogAt(t),cull:false});particles(d,R,S,cam||null,'particle03',f,0,1,1,1);}},
+   S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('tvfin'),{frame:f,t,fogK:d.fogAt(t),cull:false});if(cam)drawParticles(d,R,S,cam,0,tvField(Math.floor(t*10+1e-6)-TVLAG));}},
  {name:'flesh',t0:172.0,t1:185.8,tex:['metamap0','metaenv0','bumpidx'],
   render(d,R,lt,t){isoScene2(d,R,lt);}},
  {name:'end',t0:185.8,t1:300,render(d,R,lt,t){R.clear(0xffffff);}},
