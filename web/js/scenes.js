@@ -26,7 +26,8 @@ function spawnFrame(e,j,pos){const out=[];let st=PS&&PS.seed[e][j]?PS.seed[e][j]
     out.push({p:[pos[0],pos[1],pos[2]],v:vel,inv:f32(1/r),size,life:200,col:[cl(100+a*128),cl(40+b*128),cl(25+c*128)]});}
   return out;}
 function particleField(S,tick){const n=Math.floor(tick/7+1e-6),dt=f32(0.1),parts=[];
-  for(let j=Math.max(0,n-29);j<=n;j++)for(let e=0;e<3;e++){const pos=S.lightPos('particle0'+e,Math.trunc(j*7*1.2));if(!pos)continue;
+  for(let j=Math.max(0,n-29);j<=n;j++)for(let e=0;e<3;e++){if(PS&&!PS.seed[e][j])continue;   // no emitter call in the dump (the piikit scene, 83.1-86.6 s, does not run the particle stage)
+    const pos=S.lightPos('particle0'+e,Math.trunc(j*7*1.2));if(!pos)continue;
     parts.push(...spawnFrame(e,j,pos).map(q=>(q.j=j,q)));
     }
   return ageParts(parts,n,[0,0,-1]);}
