@@ -340,8 +340,9 @@ export const SCENES=[
    blit(R,d.tex['raita'],0,t,1,0,0);if(t<147.55)d.drawSprites(t,BSA);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.2)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
-  render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.1)*TICK);   // camera frame = scene tick (tick 322 at 162.5 s: exact camera match)
-   S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('tvfin'),{frame:f,t,fogK:d.fogAt(t),cull:false});if(cam)drawParticles(d,R,S,cam,0,tvField(Math.floor(t*10+1e-6)-TVLAG));}},
+  render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.2)*TICK);   // camera frame = scene tick of the render shown (tick 308 for the 162.5 s grab: hook of the render at 11361 = 21*541, see fb.py trace)
+   S.pose(f);const cam=S.camera("Camera01",f);const mf=d.mats('tvfin'),fbm=d.fbTex&&{tex:d.fbTex,mode:1,unlit:true,us:317.5/320,vs:197.5/200};
+   if(cam)drawScene(R,S,cam,fbm?(n=>n==='FEEDBACK'?fbm:mf(n)):mf,{frame:f,t,fogK:d.fogAt(t),cull:false});if(cam)drawParticles(d,R,S,cam,0,tvField(Math.floor(t*10+1e-6)-TVLAG));}},
  {name:'flesh',t0:172.0,t1:185.8,tex:['metamap0','metaenv0','bumpidx'],
   render(d,R,lt,t){isoScene2(d,R,lt);}},
  {name:'end',t0:185.8,t1:300,render(d,R,lt,t){R.clear(0xffffff);}},

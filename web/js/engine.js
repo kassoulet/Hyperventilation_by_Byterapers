@@ -215,6 +215,7 @@ export function drawScene(R,S,cam,matFor,opts){
       if(mat.facemap){   // MAT_FACEMAP faces (0x32e80): corner texture coordinates by face parity and edge flags, not the vertex coordinates
         const fl=m.obj.fflags[i]&7,uv=(i&1)?(fl===3?[1,0,0,1,1,1]:[1,1,1,0,0,1]):[1,0,0,0,0,1];
         P=P.map((c,k)=>{const q=Float32Array.from(c);q[3]=uv[k*2];q[4]=uv[k*2+1];return q;});}
+      if(mat.us){P=P.map(c=>{const q=Float32Array.from(c);q[3]*=mat.us;q[4]=(1-q[4])*mat.vs;return q;});}   // FEEDBACK faces (0x42f04): the previous frame (320x200) mapped with the face's own UVs scaled to 317.5 x 197.5 texels
       out.length=0;clipTri(P,out);
       for(const T of out){
         const ul=mat.unlit||o.unlit;

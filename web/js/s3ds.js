@@ -74,6 +74,7 @@ export function parse3DS(buf){
   // rotation keys, as the original's loader builds them (0x38000-0x38f00): absolute quaternion per key (w,x,y,z, file axis (x,y,z) -> (x,z,y), q_i = rel_i * q_(i-1)) plus the two
   // Bezier control quaternions a (+0x10, incoming) and b (+0x20, outgoing) from the TCB values (function 0x38dd4); evalRot is its evaluator 0x39880
   for(const n of sc.nodes) if(n.rot)setupRot(n.rot);
+  for(const cn of sc.nodes)if(cn.type===0xB003&&cn.roll&&cn.pos&&(cn.roll.flags&3)===3&&cn.roll.length>cn.pos.length)cn.roll.q=cn.pos.length-1;   // see tcbTan
   sc.byName={};for(const o of sc.objects)sc.byName[o.name]=o;
   return sc;
 }
@@ -89,7 +90,9 @@ function tcbTan(keys,i,dim){
   const t=p.t,c=p.c,b=p.b;const tin=[],tout=[],loop=isLoop(keys);
   for(let d=0;d<dim;d++){
     const a=v[d]-pv[d],bb=nv[d]-v[d];
-    if(loop&&(i===0||i===n-1)){const P=keys[n-2].v[d],N=keys[1].v[d],V=keys[0].v[d],A=V-P,B=N-V;   // looped track: the first/last key use their wrapped neighbours (0x38fc0 wraps the time)
+    if(keys.q!==undefined&&(i===keys.q||i===n-1)){const P=keys[i-1].v[d],N=i===keys.q?keys[1].v[d]:0,A=v[d]-P,B=N-v[d];   // the original's tangent setup (0x388dc) tests 'last key' as i == [track+4]-1 (3 -1 for tvfin's camera, whose position track has 3 keys) for its 6-key roll track: key 2 gets wrapped neighbours (prev, keys[1]) -> zero tangent; the real last key reads the next key past the array (0)
+      tout[d]=0.5*((1-t)*(1+b)*(1+c)*A+(1-t)*(1-b)*(1-c)*B);tin[d]=0.5*((1-t)*(1+b)*(1-c)*A+(1-t)*(1-b)*(1+c)*B);}
+    else if(loop&&(i===0||i===n-1)){const P=keys[n-2].v[d],N=keys[1].v[d],V=keys[0].v[d],A=V-P,B=N-V;   // looped track: the first/last key use their wrapped neighbours (0x38fc0 wraps the time)
       tout[d]=0.5*((1-t)*(1+b)*(1+c)*A+(1-t)*(1-b)*(1-c)*B);tin[d]=0.5*((1-t)*(1+b)*(1-c)*A+(1-t)*(1-b)*(1+c)*B);}   // in/out differ when c!=0 (ball2 keys: c=-1)
     else if(i===0&&n>2){const k1=keys[1],k2=keys[2],a1=k1.v[d]-v[d],b1=k2.v[d]-k1.v[d],t1=k1.t||0,c1=k1.c||0,bi1=k1.b||0;   // open track, first key: 1.5*(P1-P0) - 0.5*(incoming tangent of key 1) (matched to 0.03 units against the engine's camera path)
       tin[d]=tout[d]=1.5*a1-0.5*0.5*((1-t1)*(1+bi1)*(1-c1)*a1+(1-t1)*(1-bi1)*(1+c1)*b1);}
