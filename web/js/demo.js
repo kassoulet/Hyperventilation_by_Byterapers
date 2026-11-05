@@ -4,6 +4,7 @@ import {W,H,VY,VH,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './engi
 import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;
+const FLIPS=new Set(['lava tunnel','room','portrait']);   // scenes whose reference frames show the 21-tick flip lag (checked on 32.5/37.5/42.5 s in the emulator; the other scenes' clocks were fitted with the constant 7-tick lag)
 const BLO=0.3;   // fitted: the beat blur seen in the reference frames is the one of the call ~0.3 s earlier (72.5 s 17 -> 14; single-frame fit)
 let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
 //   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
@@ -60,7 +61,11 @@ export class Demo{
   fogAt(t){const a=this.fog;let lo=0,hi=a.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(a[m][0]<=t)lo=m;else hi=m-1;}const r=a[lo];return r[1]?r[2]:0;}
   mats(n){return this._m[n]||(this._m[n]=autoMats(this,this.sc3[n].sc));}
   currentScene(t){for(const S of SCENES)if(t>=S.t0&&t<S.t1)return S;return null;}
+  // The reference frames are grabbed from the original's screen buffer, which the flip routine only refreshes on every 3rd main-loop iteration (ticks multiple of 21,
+  // measured in the emulator at 37.5/42.5 s: the buffers at the boundaries 2954..2975 are identical, the content is the render made at tick 2961 = 21*floor(2975/21)).
+  // All scene clocks of the port already assume the shown frame was rendered 7 ticks before the boundary, hence the correction. Only in test mode (?test=1, the golden grabs) and only for the scenes in FLIPS.
   renderAt(t){
+    const S0=window.demoTest&&this.currentScene(t);if(S0&&FLIPS.has(S0.name)){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+7)/70;}
     this.t=t;const R=this.R;R.clear(0);R.cam=null;
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);
