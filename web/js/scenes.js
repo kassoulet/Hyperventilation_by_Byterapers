@@ -8,7 +8,7 @@ const hash=(n)=>{n=Math.imul(n^61,0x45d9f3b);n^=n>>>15;n=Math.imul(n,0x2c1b3c6d)
 export function autoMats(d,sc,over){
   const cache={};const tx=(n)=>n&&d.tex[n.replace(/\.[a-z]+$/i,'').toLowerCase()];
   return (name)=>{if(name in cache)return cache[name];const m=sc.materials[name];if(!m)return cache[name]=null;
-    let mode=0;const r={tex:tx(m.map),env:tx(m.refl),bump:tx(m.bump)};
+    let mode=0;const r={tex:tx(m.map),env:tx(m.refl),bump:tx(m.bump),facemap:m.facemap};
     if(r.tex)mode|=1;if(r.env)mode|=2;if(r.bump&&r.env)mode|=4;r.mode=mode;r.unlit=m.shading===1;
     if(!mode){r.r=m.diffuse[0]/255;r.g=m.diffuse[1]/255;r.b=m.diffuse[2]/255;}
     Object.assign(r,(over&&over[name])||{});return cache[name]=r;};

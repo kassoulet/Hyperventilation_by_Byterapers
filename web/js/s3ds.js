@@ -35,6 +35,7 @@ export function parse3DS(buf){
       case 0xA220: walk(b,e,(i,bb)=>{if(i===0xA300)curMat.refl=cstr(bb)[0];}); break;
       case 0xA230: walk(b,e,(i,bb)=>{if(i===0xA300)curMat.bump=cstr(bb)[0];}); break;
       case 0xA081: curMat.twoside=true; break;
+      case 0xA088: curMat.facemap=true; break;   // MAT_FACEMAP: the original (0x2c692 sets material flag 0x40, builder 0x2d9f3 -> 0x32e80) overrides the face's texture coordinates with a quad mapping
       case 0xA100: curMat.shading=dv.getUint16(b,true); break;   // 1 flat, 2 gouraud, 3 phong/metal: the original draws shading-1 materials unlit (face flag 0x03 bit 1 clear)
       case 0x4000: {const [n,p]=cstr(b);curObj={name:n,verts:null,faces:null,uv:null,mat:[],xform:null,hidden:false,kind:'mesh'};sc.objects.push(curObj);walk(p,e,chunk);
         // the original's loader keeps the texture coordinates in two static arrays (0x1af8e0/0x1bf8e0) that it never clears: an object without a 0x4140 chunk is drawn with the previous object's coordinates (0x2d655)
@@ -43,7 +44,7 @@ export function parse3DS(buf){
         break;}
       case 0x4100: walk(b,e,chunk); break;
       case 0x4110: {const n=dv.getUint16(b,true);const a=new Float32Array(n*3);for(let i=0;i<n*3;i++)a[i]=f32(b+2+i*4);curObj.verts=a;break;}
-      case 0x4120: {const n=dv.getUint16(b,true);const a=new Uint16Array(n*3);for(let i=0;i<n;i++){a[i*3]=dv.getUint16(b+2+i*8,true);a[i*3+1]=dv.getUint16(b+4+i*8,true);a[i*3+2]=dv.getUint16(b+6+i*8,true);}curObj.faces=a;walk(b+2+n*8,e,chunk);break;}
+      case 0x4120: {const n=dv.getUint16(b,true);const a=new Uint16Array(n*3);for(let i=0;i<n;i++){a[i*3]=dv.getUint16(b+2+i*8,true);a[i*3+1]=dv.getUint16(b+4+i*8,true);a[i*3+2]=dv.getUint16(b+6+i*8,true);}curObj.faces=a;curObj.fflags=Uint16Array.from({length:n},(_,i)=>dv.getUint16(b+8+i*8,true));walk(b+2+n*8,e,chunk);break;}
       case 0x4130: {const [n,p]=cstr(b);const c=dv.getUint16(p,true);const fl=[];for(let i=0;i<c;i++)fl.push(dv.getUint16(p+2+i*2,true));for(const f of fl)SM[f]=n;curObj.mat.push({name:n,faces:fl});break;}
       case 0x4140: {const n=dv.getUint16(b,true);const a=new Float32Array(n*2);for(let i=0;i<n*2;i++)a[i]=f32(b+2+i*4);for(let i=0;i<n;i++){SU[i]=a[i*2];SV[i]=a[i*2+1];}curObj.uv=a;break;}
       case 0x4160: {const m=new Float32Array(12);for(let i=0;i<12;i++)m[i]=f32(b+i*4);curObj.xform=m;break;}

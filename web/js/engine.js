@@ -107,7 +107,7 @@ export class Scene3D{
     this.sc=sc;this.meshes=[];
     for(const n of sc.nodes){
       if(n.type!==0xB002)continue;const o=sc.byName[n.name];if(!o||!o.verts||!o.faces)continue;
-      const M=o.xform||[1,0,0,0,1,0,0,0,1,0,0,0],org=[M[9],M[10],M[11]],bx=[M[0],M[1],M[2]],by=[M[3],M[4],M[5]],bz=[M[6],M[7],M[8]];
+      const M=o.xform||[1,0,0,0,1,0,0,0,1,0,0,0],org=[M[9],M[10],M[11]],nz=(v)=>{const l=Math.hypot(...v)||1;return v.map(x=>x/l);},bx=nz([M[0],M[1],M[2]]),by=nz([M[3],M[4],M[5]]),bz=nz([M[6],M[7],M[8]]);   // the original's local axes are normalised (hallu04: |axis y| = 2.055, the node's scale track supplies it; checked against the emulator's vertex records)
       const nv=o.verts.length/3,loc=new Float32Array(nv*3);
       for(let i=0;i<nv;i++){const d=[o.verts[i*3]-org[0]-n.pivot[0]*0,o.verts[i*3+1]-org[1],o.verts[i*3+2]-org[2]];
         loc[i*3]=dot(d,bx)-n.pivot[0];loc[i*3+1]=dot(d,by)-n.pivot[1];loc[i*3+2]=dot(d,bz)-n.pivot[2];}
@@ -121,7 +121,7 @@ export class Scene3D{
     }
   }
   nodeXform(n,f){
-    const p=evalVec(n.pos,f,3,[0,0,0]),q=evalRot(n.rot,f),s=evalVec(n.scl,f,3,[1,1,1]);return {p,q,s};
+    const p=evalVec(n.pos,f,3,[0,0,0]),q=evalRot(n.rot,f),s=[1,1,1];return {p,q,s};   // the original's object matrices carry no node scale (hallu blades: matrix rows are unit length although the track scales y by 2.055)
   }
   // world-space geometry at 3DS frame f
   pose(f){
@@ -212,6 +212,9 @@ export function drawScene(R,S,cam,matFor,opts){
         const nn=[Math.abs(e1[1]*e2[2]-e1[2]*e2[1]),Math.abs(e1[2]*e2[0]-e1[0]*e2[2]),Math.abs(e1[0]*e2[1]-e1[1]*e2[0])];
         const ax=nn[2]>=nn[0]&&nn[2]>=nn[1]?[0,1]:nn[1]>=nn[0]?[0,2]:[1,2];const SC=0.01;
         P=P.map((c,k)=>{const q=Float32Array.from(c);q[3]=L[k][ax[0]]*SC;q[4]=1-L[k][ax[1]]*SC;return q;});}
+      if(mat.facemap){   // MAT_FACEMAP faces (0x32e80): corner texture coordinates by face parity and edge flags, not the vertex coordinates
+        const fl=m.obj.fflags[i]&7,uv=(i&1)?(fl===3?[1,0,0,1,1,1]:[1,1,1,0,0,1]):[1,0,0,0,0,1];
+        P=P.map((c,k)=>{const q=Float32Array.from(c);q[3]=uv[k*2];q[4]=uv[k*2+1];return q;});}
       out.length=0;clipTri(P,out);
       for(const T of out){
         const ul=mat.unlit||o.unlit;
