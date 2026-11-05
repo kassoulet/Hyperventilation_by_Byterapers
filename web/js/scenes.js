@@ -290,9 +290,10 @@ function isoParticles(d,R,n,cam){
 }
 const TVLAG=1,BSA=0.15;   // fitted: before the 147.55 s switch the lyric strips (gone2) sit under the 3D balls and much fainter than the sprite table's alpha, until the scene switch (reference frames 147.0-147.5)
 const dt3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
-function isoScene2(d,R,lt){
+function isoScene2(d,R,lt,t){
   const fb=R.fb;fb.fill(0xff000000);
-  const n=Math.floor(lt*10),B=isoBalls(d,n);                // one sampler call per rendered frame: the reference run renders every 7 ticks
+  const n0=Math.floor(lt*10);let n=n0;if(window.demoTest){const T=Math.round(t*70);n=(21*Math.floor(T/21)-12040)/7;}   // the reference grabs show the buffer flipped every 21 ticks: the sampler call of the frame rendered at tick 21*floor(T/21) (checked at 172.5/177.5/182.5)
+  const B=isoBalls(d,n);                // one sampler call per rendered frame: the reference run renders every 7 ticks
   const EXT2=800,NG2=16,HG2=100,g=ballField(B,EXT2,NG2,HG2,EXT2*0.55);
   // camera (0x239bc/0x23814): at (0,0,-1000), look-at (2,2,0), FOV 78 -> focal 160/tan(39 deg) = 197.58; projection fitted on the original's projected vertices (centre 159.5,99.5)
   const Fv=norm([2,2,1000]),rt=norm([Fv[2],0,-Fv[0]]),up=[Fv[1]*rt[2]-Fv[2]*rt[1],Fv[2]*rt[0]-Fv[0]*rt[2],Fv[0]*rt[1]-Fv[1]*rt[0]],fz=160/Math.tan(39*Math.PI/180);
@@ -301,7 +302,7 @@ function isoScene2(d,R,lt){
     proj(P,nn){const q=[P[0],P[1],P[2]+1000],z=dt(q,Fv);if(z<1)return null;const l=Math.hypot(nn[0],nn[1],nn[2])||1,nv=[dt(nn,rt)/l,dt(nn,up)/l];
       return [W/2-0.5+fz*dt(q,rt)/z,VY+VH/2-0.5-fz*dt(q,up)/z,1/z,nv[0],nv[1]];},
     uv:P=>[4*(1+Math.atan2(P[2],P[0])/Math.PI),4+0.005*P[1]]});
-  isoParticles(d,R,n-2,{Fv,rt,up,fz});       // flag [obj+0x184]&1: v = 4 + 4*y/800 (0x37a1e)
+  isoParticles(d,R,n0-2,{Fv,rt,up,fz});       // flag [obj+0x184]&1: v = 4 + 4*y/800 (0x37a1e)
 }
 const S3=(d,n)=>d.sc3[n];
 export const SCENES=[
@@ -341,9 +342,10 @@ export const SCENES=[
    blit(R,d.tex['raita'],0,t,1,0,0);if(t<147.55)d.drawSprites(t,BSA);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.2)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
-  render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.1)*TICK);   // camera frame = scene tick (tick 322 at 162.5 s: exact camera match)
-   S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('tvfin'),{frame:f,t,fogK:d.fogAt(t),cull:false});if(cam)drawParticles(d,R,S,cam,0,tvField(Math.floor(t*10+1e-6)-TVLAG));}},
+  render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.2)*TICK);   // camera frame = scene tick of the render shown (tick 308 for the 162.5 s grab: hook of the render at 11361 = 21*541, see fb.py trace)
+   S.pose(f);const cam=S.camera("Camera01",f);const mf=d.mats('tvfin'),fbm=d.fbTex&&{tex:d.fbTex,mode:1,unlit:true,us:317.5/320,vs:197.5/200};
+   if(cam)drawScene(R,S,cam,fbm?(n=>n==='FEEDBACK'?fbm:mf(n)):mf,{frame:f,t,fogK:d.fogAt(t),cull:false});if(cam)drawParticles(d,R,S,cam,0,tvField(Math.floor(t*10+1e-6)-TVLAG));}},
  {name:'flesh',t0:172.0,t1:185.8,tex:['metamap0','metaenv0','bumpidx'],
-  render(d,R,lt,t){isoScene2(d,R,lt);}},
+  render(d,R,lt,t){isoScene2(d,R,lt,t);}},
  {name:'end',t0:185.8,t1:300,render(d,R,lt,t){R.clear(0xffffff);}},
 ];
