@@ -65,7 +65,7 @@ export class Demo{
   // measured in the emulator at 37.5/42.5 s: the buffers at the boundaries 2954..2975 are identical, the content is the render made at tick 2961 = 21*floor(2975/21)).
   // All scene clocks of the port already assume the shown frame was rendered 7 ticks before the boundary, hence the correction. Only in test mode (?test=1, the golden grabs) and only for the scenes in FLIPS.
   renderAt(t){
-    const S0=window.demoTest&&this.currentScene(t);if(S0&&FLIPS.has(S0.name)){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+7)/70;}
+    const S0=window.demoTest&&this.currentScene(t);if(S0&&(FLIPS.has(S0.name)||(S0.name==='swirl'&&t<132.9))){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+7)/70;}
     this.t=t;const R=this.R;R.clear(0);R.cam=null;
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);

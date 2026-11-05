@@ -90,8 +90,8 @@ function tunnel(d,R,tex,tick,att,shMax,fOff,gam,fDiv){
 const P1=1300,P2=1030,FX=0.0212*Math.PI,FY=0.0301*Math.PI;
 const filAtt=(T)=>[[40*Math.cos((T+P1+40)*FX)+160,40*Math.cos((T+P2+40)*FY)+100,Math.fround(Math.cos((T+200)*0.02)*150*16777216-150)],
   [40*Math.cos((T+P1+20)*FX)+160,40*Math.cos((T+P2+20)*FY)+100,Math.fround(Math.cos(T*0.03)*180*16777216-140)]];
-function swirl1(d,R,t){const gt=Math.floor(63*(t-128.39)+1e-6);tunnel(d,R,d.tex['fil'],gt,filAtt,31.99999,700,false,14000);   // the grid clock drifts 7 ticks per second behind the 70 Hz one in the reference frames (offsets 0/-7/-14 ticks at 130.5/131.5/132.5 s)
-  const ot=gt+1,{S}=S3(d,'morph');S.pose(ot);const cam=S.camera('Camera01',ot);if(cam){cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('morph'),{frame:ot,t,cull:false,unlit:true});}}   // the object and camera run on the same (slow) clock as the grid: one frame fitted at 132.5 s (258 -> 259 ticks); with the original's rotation/morph evaluation the shape then matches
+function swirl1(d,R,t){const gt=Math.round(70*(t-128.6))-7;tunnel(d,R,d.tex['fil'],gt,filAtt,31.99999,700,false,14000);   // scene tick (70 Hz, 0 at 128.6 s) of the call whose output the reference shows: one call behind, plus the 3-call page-flip lag that renderAt adds in test mode (FLIPS)
+  const ot=gt,{S}=S3(d,'morph');S.pose(ot);const cam=S.camera('Camera01',ot);if(cam){cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('morph'),{frame:ot,t,cull:false,unlit:true});}}   // the object and camera run on the same clock as the grid
 function blit(R,tex,sc,t,zoom,ox,oy){ // full-viewport image with zoom/pan
   const fb=R.fb,d=tex.d;for(let y=0;y<VH;y++){const v=((y-100)/zoom+100+oy)/tex.h;const ty=Math.min(tex.h-1,Math.max(0,(v*tex.h)|0));
     for(let x=0;x<W;x++){const u=((x-160)/zoom+160+ox)/tex.w;const tx=Math.min(tex.w-1,Math.max(0,(u*tex.w)|0));fb[(y+VY)*W+x]=d[ty*tex.w+tx]|0xff000000;}}
