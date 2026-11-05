@@ -22,7 +22,7 @@ let PS=null;let PS2=null;let PS3=null;export const setPSeeds=(o,o2,o3)=>{PS=o;PS
 function spawnFrame(e,j,pos){const out=[];let st=PS&&PS.seed[e][j]?PS.seed[e][j]>>>0:LCG((e*7919+j*104729+12345)>>>0);if(PS&&PS.pos[e][j]){const q=PS.pos[e][j];pos=[q[0],q[2],q[1]];}const rnd=()=>{st=LCG(st);return (st>>>16)&0x7fff;};
   for(let i=0;i<7;i++){const q=()=>f32(f32(f32((rnd()%1000)*0.4000000059604645)*0.002)-0.4000000059604645);const a=q(),b=q(),c=q();
     const cl=x=>Math.max(0,Math.min(255,x|0));
-    const vel=[0,0,0].map(()=>f32((rnd()%1000)*0.01-5)),r=f32((rnd()&0xffff)*1.52587890625e-5+4.1),size=f32((rnd()%1000)*0.005+3);
+    const vx=f32((rnd()%1000)*0.01-5),vy=f32((rnd()%1000)*0.01-5),vz=f32((rnd()%1000)*0.01-5),vel=[vx,vz,vy],r=f32((rnd()&0xffff)*1.52587890625e-5+4.1),size=f32((rnd()%1000)*0.005+3);
     out.push({p:[pos[0],pos[1],pos[2]],v:vel,inv:f32(1/r),size,life:200,col:[cl(100+a*128),cl(40+b*128),cl(25+c*128)]});}
   return out;}
 function particleField(S,tick){const n=Math.floor(tick/7+1e-6),dt=f32(0.1),parts=[];
@@ -44,9 +44,10 @@ function tvField(n){const live=[],parts=[];if(!PS3)return parts;
   for(let j=Math.max(PS3.j0,n-17);j<=Math.min(n,PS3.j0+PS3.p.length-1);j++)for(const e of PS3.p[j-PS3.j0])
     parts.push({p:[e[0],e[2],e[1]],v:[e[3],e[5],e[4]],inv:f32(1/e[6]),size:2,life:120,l0:120,col:[e[7],e[8],e[9]],j});
   return ageParts(parts,n,[0,0,40]);}
-function drawParticles(d,R,S,cam,tick,field){const tex=d.tex['particle'];if(!tex)return;const fb=R.fb,td=tex.d,tw=tex.w,th=tex.h;
+function drawParticles(d,R,S,cam,tick,field,testZ){const tex=d.tex['particle'];if(!tex)return;const fb=R.fb,td=tex.d,tw=tex.w,th=tex.h;
   for(const q of field||particleField(S,tick)){const v=cam.toView(q.p),z=v[2];if(z<1.5||z>514.9||q.size*160<z)continue;
     const sx=159.5+cam.pfocal*v[0]/z,sy=VY+99.5-cam.pfocal*v[1]/z,w=2*q.size*160/z,ratio=q.life/(q.l0||200);
+    if(testZ){const px=Math.round(sx),py=Math.round(sy);if(px<0||px>319||py<VY||py>VY+199||!(1/z>R.zb[py*W+px]))continue;}   // 0x2b6a8 (called by 0x32f10): the particle is drawn only if its centre pixel is on screen and nearer than the depth buffer there
     const L=[q.col[0]*ratio,q.col[1]*ratio,q.col[2]*ratio].map(x=>(x|0)>>2);
     const x0=Math.max(0,Math.floor(sx-w/2)),x1=Math.min(W-1,Math.ceil(sx+w/2)),y0=Math.max(VY,Math.floor(sy-w/2)),y1=Math.min(VY+VH-1,Math.ceil(sy+w/2));
     for(let y=y0;y<=y1;y++){const tv=(y+0.5-(sy-w/2))/w;if(tv<0||tv>=1)continue;const ty=(tv*th)|0;
@@ -321,7 +322,7 @@ export const SCENES=[
  {name:'hallu',t0:72.55,t1:83.1,tex:['ruoho','0ikkuna','marmori2','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*(lt+0.05));},   /* the original's scene tick restarts at 72.4 but its first frame appears at ~72.55 */
   draw(d,R,t,tick){const {S}=S3(d,'hallu');const f=Math.trunc(tick*1.2);   // the callback 0x1e7d8 sets frame = trunc(1.2*scene tick)
    S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.pfocal;
-    drawScene(R,S,cam,d.mats('hallu'),{frame:f,t,fogK:d.fogAt(t)});drawParticles(d,R,S,cam,tick);}},
+    drawScene(R,S,cam,d.mats('hallu'),{frame:f,t,fogK:d.fogAt(t)});drawParticles(d,R,S,cam,tick,undefined,true);}},
  {name:'piikit',t0:83.1,t1:86.6,tex:['kuvio','ruoho','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*lt);},
   draw(d,R,t,tick,camName){const {S}=S3(d,'piikit2');const f=tick;   // 93.7-100.7 s uses Camera03 (camera positions match the original exactly)
     camName=camName||'Camera01';   // callback 0x1f45c: frame = scene tick (no 1.2 factor)
