@@ -72,7 +72,7 @@ export function parse3DS(buf){
   }
   walk(0,buf.byteLength,chunk);
   // accumulate relative rotation keys into absolute quaternions
-  for(const n of sc.nodes) if(n.rot){let q=[0,0,0,1];for(const k of n.rot){const [a,x,y,z]=k.v;const l=Math.hypot(x,y,z)||1;const s=Math.sin(a/2);const r=[-x/l*s,-y/l*s,-z/l*s,Math.cos(a/2)];q=qmul(q,r);k.q=q.slice();}}  // 3DS angle-axis is the inverse of the usual convention (hence the sign flip)
+  for(const n of sc.nodes) if(n.rot){let q=[0,0,0,1];for(const k of n.rot){const [a,x,y,z]=k.v;const l=Math.hypot(x,y,z)||1;const s=Math.sin(a/2);const r=[-x/l*s,-y/l*s,-z/l*s,Math.cos(a/2)];q=qmul(r,q);k.q=q.slice();}}  // 3DS angle-axis is the inverse of the usual convention (hence the sign flip)
   sc.byName={};for(const o of sc.objects)sc.byName[o.name]=o;
   return sc;
 }
@@ -114,6 +114,20 @@ export function evalRot(keys,f){
   if(!keys||!keys.length)return [0,0,0,1];const n=keys.length;f=wrapT(keys,f);
   if(n===1||f<=keys[0].f)return keys[0].q;if(f>=keys[n-1].f)return keys[n-1].q;
   let i=0;while(i<n-2&&f>=keys[i+1].f)i++;const k0=keys[i],k1=keys[i+1];
-  return slerp(k0.q,k1.q,(f-k0.f)/(k1.f-k0.f));
+  const t=(f-k0.f)/(k1.f-k0.f);
+  // the original (0x39880) evaluates squad(q_i, B_i, A_i+1, q_i+1, t) = three nested slerps with the control points of the tcb quaternion spline (key records dumped from the emulator:
+  // A = q*exp(+X), B = q*exp(-X), X = (ln(q^-1 q_prev)+ln(q^-1 q_next))/6 with t=c=b=0 and ln without the shortest-path flip; a looping track wraps prev/next through key n-2 / key 1)
+  if(keys.ctl===undefined)qctl(keys);
+  if(keys.ctl){const t2=2*t*(1-t);return slerp(slerp(k0.q,k1.q,t),slerp(k0.B,k1.A,t),t2);}
+  return slerp(k0.q,k1.q,t);
 }
+const qinv=q=>[-q[0],-q[1],-q[2],q[3]];
+const qln=q=>{const v=Math.hypot(q[0],q[1],q[2]);if(v<1e-9)return [0,0,0];const a=Math.atan2(v,q[3])/v;return [q[0]*a,q[1]*a,q[2]*a];};
+const qexp=v=>{const a=Math.hypot(...v);if(a<1e-9)return [0,0,0,1];const s=Math.sin(a)/a;return [v[0]*s,v[1]*s,v[2]*s,Math.cos(a)];};
+function qctl(keys){const n=keys.length,loop=isLoop(keys);keys.ctl=false;
+  if(keys.some(k=>k.t||k.c||k.b))return;
+  for(let i=0;i<n;i++){const q=keys[i].q,pq=i>0?keys[i-1].q:loop?keys[n-2].q:null,nq=i<n-1?keys[i+1].q:loop?keys[1].q:null;
+    const lp=pq?qln(qmul(qinv(q),pq)):[0,0,0],ln=nq?qln(qmul(qinv(q),nq)):[0,0,0],X=[0,1,2].map(d=>(lp[d]+ln[d])/6);
+    keys[i].A=qmul(q,qexp(X));keys[i].B=qmul(q,qexp(X.map(x=>-x)));}
+  keys.ctl=true;}
 export function evalScalar(keys,f,def){const v=evalVec(keys,f,1,null);return v?v[0]:def;}
