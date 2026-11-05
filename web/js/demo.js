@@ -26,6 +26,8 @@ export class Demo{
     this.lrec=await (await fetch(base+'lights.json')).json();   // the lighter's light list (colour, position, inner^2, outer^2, multiplier) per frame, from the emulator
     this.flares=await (await fetch(base+'flares.json')).json();   // lights flagged for lens flares, per call of the original's 0x31180 (see WRITEUP-asm.md 24)
     this.fog=await (await fetch(base+'fog.json')).json();   // [t,flag,k] per original frame: depth-fade state of the original's lighter
+    const ft=await (await fetch(base+'fogtab.json')).json();   // the 8-bit mappers' depth tables (0x16a718/0x16e718/0x172718, 64 rows x 256), installed at the room's start: colour -> colour*(1-w)+fog*w, w=.1+.9*row/63, fog (97,43,68)
+    this.fogT=[ft.r,ft.g,ft.b].map(b=>Uint8Array.from(atob(b),c=>c.charCodeAt(0)));this.fogT0=ft.t0;
     const names=new Set(['glow','lens','particle']);
     for(const s of this.script.sprites)if(s.img)names.add(s.img.replace(/\.png$/i,''));
     for(const S of SCENES)for(const n of (S.tex||[]))names.add(n);
@@ -66,7 +68,7 @@ export class Demo{
   // All scene clocks of the port already assume the shown frame was rendered 7 ticks before the boundary, hence the correction. Only in test mode (?test=1, the golden grabs) and only for the scenes in FLIPS.
   renderAt(t){
     const S0=window.demoTest&&this.currentScene(t);if(S0&&FLIPS.has(S0.name)){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+7)/70;}
-    this.t=t;const R=this.R;R.clear(0);R.cam=null;
+    this.t=t;const R=this.R;R.clear(0);R.cam=null;R.fogT=null;
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);
     // 2D layers

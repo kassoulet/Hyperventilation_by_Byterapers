@@ -32,7 +32,7 @@ export class Raster{
       g[k*3]=(da*(c[1]-a[1])-db*(b[1]-a[1]))*ia;                 // d/dx
       g[k*3+1]=(db*(b[0]-a[0])-da*(c[0]-a[0]))*ia;               // d/dy
       g0[k]=a[ka];}
-    const add=(mode&8)!==0,alp=(mode&16)!==0,A=m.alpha===undefined?1:m.alpha;
+    const fT=this.fogT,add=(mode&8)!==0,alp=(mode&16)!==0,A=m.alpha===undefined?1:m.alpha;
     const tw=tex?tex.w:0,th=tex?tex.h:0,twm=tw-1,thm=th-1,td=tex?tex.d:null;
     const ew=env?env.w:0,eh=env?env.h:0,ewm=ew-1,ehm=eh-1,ed=env?env.d:null;
     const bw=bump?bump.w:0,bh=bump?bump.h:0,bwm=bw-1,bhm=bh-1,bd=bump?bump.d:null;
@@ -59,6 +59,7 @@ export class Raster{
         else if(mode&2){R=G=B=0;}else{R=255*fr;G=255*fg;B=255*fbl;}
         // the original's shade LUT (0x149a18) is [row*256+colour] = floor(colour*row/64), row = integer part of the interpolated light (0..62): 63 light levels per channel
         R=((R|0)*((r>0?r*64:0)|0))>>6;G=((G|0)*((gg>0?gg*64:0)|0))>>6;B=((B|0)*((bb>0?bb*64:0)|0))>>6;
+        if(fT&&mode===1){const w=1/iz,row=w<=1.5?0:Math.min(63,((w-1.5)*0.0512)|0)<<8;R=fT[0][row+R];G=fT[1][row+G];B=fT[2][row+B];}   // the 8-bit mappers' depth table: row = (z-1.5)*64/1250.0028 (far 1251.5028, as the particles' fade)
         if(mode&6){
           let u=eu,v=ev;
           if(mode&4){const w=1/iz;let s=uw*w,t2=vw*w;s-=Math.floor(s);t2-=Math.floor(t2);
