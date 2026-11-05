@@ -1,7 +1,7 @@
 // main.js - player: canvas 320x240 shown 4:3 (square pixels in VESA 320x240), music via libopenmpt (chiptune3), pause + seek anywhere.
 import {Demo} from './demo.js';
 import {SCENES} from './scenes.js';
-const TEST=new URLSearchParams(location.search).has('test');
+const TEST=new URLSearchParams(location.search).has('test');window.demoTest=TEST;
 const $=id=>document.getElementById(id);
 const d=new Demo();window.demo=d;
 const cvs=$('c'),ctx=cvs.getContext('2d');
