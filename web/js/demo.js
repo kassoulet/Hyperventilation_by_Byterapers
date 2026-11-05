@@ -5,7 +5,6 @@ import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;
 const FLIPS=new Map([['lava tunnel',7],['room',7],['portrait',7],['hallu',0],['hallu2',0],['piikit',0],['piikit2',0],['space',0],['blob',7],['photos',0],['balls',7],['tv',7]]);   // scene -> lag (ticks) its clock formula assumes   // scenes whose reference frames show the 21-tick flip lag (checked on 32.5/37.5/42.5 s in the emulator; the other scenes' clocks were fitted with the constant 7-tick lag)
-window.demoFlips=FLIPS;
 const BLO=0.3;   // fitted: the beat blur seen in the reference frames is the one of the call ~0.3 s earlier (72.5 s 17 -> 14; single-frame fit)
 let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
 //   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
