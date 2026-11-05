@@ -4,7 +4,7 @@ import {W,H,VY,VH,Tex,Raster,Scene3D,loadTex,drawScene,Camera,norm,rad} from './
 import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;const FBDEPTH=3;
-const FLIPS=new Set(['lava tunnel','room','portrait','tv']);   // scenes whose reference frames show the 21-tick flip lag (checked on 32.5/37.5/42.5 s in the emulator; the other scenes' clocks were fitted with the constant 7-tick lag)
+const FLIPS=new Map([['lava tunnel',7],['room',7],['portrait',7],['hallu',0],['hallu2',0],['piikit',0],['piikit2',0],['space',0],['blob',7],['photos',0],['balls',7],['tv',7]]);   // scene -> lag (ticks) its clock formula assumes   // scenes whose reference frames show the 21-tick flip lag (checked on 32.5/37.5/42.5 s in the emulator; the other scenes' clocks were fitted with the constant 7-tick lag)
 const BLO=0.3;   // fitted: the beat blur seen in the reference frames is the one of the call ~0.3 s earlier (72.5 s 17 -> 14; single-frame fit)
 let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
 //   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
@@ -21,6 +21,7 @@ export class Demo{
     this.mc=await (await fetch(base+'mc.json')).json();   // marching-cubes triangle table of the original (0x109120)
     this.lanim=await (await fetch(base+'lightanim.json')).json();   // animated light ranges sampled from the original
     setPSeeds(await (await fetch(base+'pseeds.json')).json(),await (await fetch(base+'pseeds_flesh.json')).json(),await (await fetch(base+'pseeds_tv.json')).json());
+    this.jit=new Map((await (await fetch(base+'jitter.json')).json()).map(r=>[r[0]*64+r[1],r]));   // per call (tick/7) and sprite slot: centre (x,y) and rand()%256 of the timed-effect updater 0x22c46-0x22dc3 (jitter rand()%range-range/2 on x and y, alpha flicker 0.9+0.2*r/256), from the emulator
     this.blur=await (await fetch(base+'blur.json')).json();   // radius of the horizontal box blur the original's flip routine applies on the beat (0x43d00), per call
     initHole(await (await fetch(base+'holefx.json')).json());
     this.lrec=await (await fetch(base+'lights.json')).json();   // the lighter's light list (colour, position, inner^2, outer^2, multiplier) per frame, from the emulator
@@ -70,7 +71,9 @@ export class Demo{
     // the tv faces of the original show the previous rendered frame (7 ticks earlier, 320x200 viewport of the other buffer; see 0x42f04): render it first (depth-limited, it is mostly dark by then)
     this.fbTex=null;const Sv=this.currentScene(t);
     if(Sv&&Sv.name==='tv'&&depth<FBDEPTH){this.renderAt(t-0.1,depth+1);this.fbTex=new Tex(W,VH,this.R.fb.slice(VY*W,(VY+VH)*W));}
-    const S0=window.demoTest&&this.currentScene(t);if(S0&&FLIPS.has(S0.name)){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+7)/70;}
+    const t0=t;
+    const S0=window.demoTest&&this.currentScene(t);const base=S0&&(FLIPS.get(S0.name)??(S0.name==='swirl'&&t<132.9?7:undefined));if(base!==undefined){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+base)/70;}
+    this.call=window.demoTest?3*Math.floor(Math.round(t0*10)/3):Math.round(t0*10);   // call of the original whose output is shown (test mode: the 21-tick buffer ring)
     this.t=t;const R=this.R;R.clear(0);R.cam=null;R.fogT=null;
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);
@@ -121,7 +124,7 @@ export class Demo{
   }
   drawSprites(t,sa=1){
     const R=this.R;
-    for(const {spr,nx,s} of this.spritesAt(t)){
+    for(const {id,spr,nx,s} of this.spritesAt(t)){
       const tex=this.tex[spr.img&&spr.img.replace(/\.png$/i,'')];if(!tex)continue;
       if(spr.img==='purple.png')continue;   // drawn by the portrait scene, which applies this sprite's fade (fadeOf)
       let a=nx.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
@@ -133,7 +136,8 @@ export class Demo{
       let x0=0,y0=0;const w=tex.w,h=tex.h;
       if(w>=320&&h>=200){x0=0;y0=VY;}
       else{ // 0x22145: a coordinate of -1 / -2 means left|top / right|bottom edge of the 320x200 viewport (centre = w/2 or 320-w/2, 200-h/2)
-        x0=spr.x>=0?Math.round(spr.x-w/2):spr.x===-1?XL:320-w;y0=VY+(spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?0:200-h);}
+        x0=spr.x>=0?Math.round(spr.x-w/2):spr.x===-1?XL:320-w;y0=VY+(spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?0:200-h);
+        const j=this.jit.get(this.call*64+id);if(j){x0=Math.floor(j[2]-w/2)+1;y0=VY+Math.floor(j[3]-h/2)+1;if(j[4]>=0)a*=0.9+0.2*j[4]/256;}}
       const fb=R.fb,d=tex.d;
       for(let y=0;y<h;y++){const yy=y0+y;if(yy<VY||yy>=VY+VH)continue;
         for(let x=0;x<w;x++){const xx=x0+x;if(xx<0||xx>=W)continue;const px=d[y*w+x],o=yy*W+xx,p=fb[o];
