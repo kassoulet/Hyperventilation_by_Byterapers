@@ -65,13 +65,14 @@ export function parse3DS(buf){
       case 0xB023: curNode.fov=track(b,'fov'); break;
       case 0xB024: curNode.roll=track(b,'roll'); break;
       case 0xB026: {const n=dv.getUint32(b+10,true);let q=b+14;const keys=[];      // morph track: frame -> name of the target object
-        for(let i=0;i<n;i++){const frame=dv.getUint32(q,true),fl=dv.getUint16(q+4,true);q+=6;for(let k=0;k<5;k++)if(fl&(1<<k))q+=4;const [nm,e2]=cstr(q);q=e2;keys.push({f:frame,name:nm});}
+        for(let i=0;i<n;i++){const frame=dv.getUint32(q,true),fl=dv.getUint16(q+4,true);q+=6;const kv=[0,0,0,0,0];for(let k=0;k<5;k++)if(fl&(1<<k)){kv[k]=f32(q);q+=4;}const [nm,e2]=cstr(q);q=e2;keys.push({f:frame,name:nm,ein:kv[3],eout:kv[4]});/*ease-to, ease-from: 0x2f580 stores them at +0x10/+0x14 of the key*/}
         curNode.morph=keys;break;}
     }
   }
   walk(0,buf.byteLength,chunk);
-  // accumulate relative rotation keys into absolute quaternions
-  for(const n of sc.nodes) if(n.rot){let q=[0,0,0,1];for(const k of n.rot){const [a,x,y,z]=k.v;const l=Math.hypot(x,y,z)||1;const s=Math.sin(a/2);const r=[-x/l*s,-y/l*s,-z/l*s,Math.cos(a/2)];q=qmul(q,r);k.q=q.slice();}}  // 3DS angle-axis is the inverse of the usual convention (hence the sign flip)
+  // rotation keys, as the original's loader builds them (0x38000-0x38f00): absolute quaternion per key (w,x,y,z, file axis (x,y,z) -> (x,z,y), q_i = rel_i * q_(i-1)) plus the two
+  // Bezier control quaternions a (+0x10, incoming) and b (+0x20, outgoing) from the TCB values (function 0x38dd4); evalRot is its evaluator 0x39880
+  for(const n of sc.nodes) if(n.rot)setupRot(n.rot);
   sc.byName={};for(const o of sc.objects)sc.byName[o.name]=o;
   return sc;
 }
@@ -109,10 +110,32 @@ export function evalVec(keys,f,dim,def){
   // tangents are per-segment-normalised by 2*seg length in lib3ds; keep unscaled (keys are roughly equispaced in these scenes)
   const r=[];for(let d=0;d<dim;d++)r[d]=h1*k0.v[d]+h2*k1.v[d]+h3*d0[d]+h4*d1[d];return r;
 }
-export function evalRot(keys,f){
-  if(!keys||!keys.length)return [0,0,0,1];const n=keys.length;f=wrapT(keys,f);
-  if(n===1||f<=keys[0].f)return keys[0].q;if(f>=keys[n-1].f)return keys[n-1].q;
-  let i=0;while(i<n-2&&f>=keys[i+1].f)i++;const k0=keys[i],k1=keys[i+1];
-  return slerp(k0.q,k1.q,(f-k0.f)/(k1.f-k0.f));
+// original quaternion helpers (0x3071c slerp without the shortest-path flip; lerp when the quaternions are parallel to 1e-7)
+const qm=(a,b)=>[a[0]*b[0]-a[1]*b[1]-a[2]*b[2]-a[3]*b[3],a[0]*b[1]+a[1]*b[0]+a[2]*b[3]-a[3]*b[2],a[0]*b[2]+a[2]*b[0]+a[3]*b[1]-a[1]*b[3],a[0]*b[3]+a[3]*b[0]+a[1]*b[2]-a[2]*b[1]];
+function sl(a,b,t){const d=a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3];let wa,wb;
+  if(1-Math.abs(d)>=1e-7){const th=Math.acos(d),sn=Math.sin(th);wa=Math.sin(th-t*th)/sn;wb=Math.sin(t*th)/sn;}else{wa=1-t;wb=t;}
+  return [wa*a[0]+wb*b[0],wa*a[1]+wb*b[1],wa*a[2]+wb*b[2],wa*a[3]+wb*b[3]];}
+function setupRot(K){
+  const n=K.length,loop=n>2&&(K.flags&3)===3;
+  for(let i=0;i<n;i++){const [a,x,y,z]=K[i].v,s=Math.sin(a/2),r=[Math.cos(a/2),x*s,z*s,y*s];K[i].qo=i?qm(r,K[i-1].qo):r;}
+  const F=(i,sg)=>{const k=K[i],q=k.qo;let pv,nx;
+    if(i===0){if(!loop)return sl(q,K[1].qo,(1+k.c*k.b)*(k.t-1)/3);pv=n-2;nx=1;}
+    else if(i===n-1){if(!loop)return sl(q,K[i-1].qo,(1+k.c*k.b)*(k.t-1)/3);pv=i-1;nx=1;}
+    else{pv=i-1;nx=i+1;}
+    const s=sg?-1:1,w=-(1+k.b)/3,X=sl(sl(q,K[pv].qo,w),sl(q,K[nx].qo,w),0.5+0.5*s*k.c);   // X3 = slerp(X1,X2,..) below
+    return sl(q,X,s*(k.t-1));};
+  for(let i=0;i<n;i++){if(n<2){K[i].qa=K[i].qb=K[i].qo;continue;}K[i].qa=F(i,0);K[i].qb=F(i,1);}
+}
+// 3DS ease (also used by the morph evaluator 0x39c10): eo = ease-from of the current key, ei = ease-to of the next
+export function ease(t,eo,ei){eo=eo||0;ei=ei||0;const s=eo+ei;if(!(s>0))return t;if(s>1){eo/=s;ei/=s;}const k=1/(2-eo-ei);
+  return t<eo?k/eo*t*t:t<1-ei?k*(2*t-eo):1-k/ei*(1-t)*(1-t);}
+export function evalRot(K,f){
+  if(!K||!K.length)return [0,0,0,1];const n=K.length,last=K[n-1].f;let q;
+  if(f>last&&(K.flags&3)===3)f%=last+1;
+  if(n===1||!(f>0))q=K[0].qo;else if(f>last)q=K[n-1].qo;   // 0x39880: time 0 / one key -> key 0; past the end of a non-looped track -> last key
+  else{let i=0;while(i<n-2&&f>K[i+1].f)i++;const k0=K[i],k1=K[i+1];
+    const t=ease((f-k0.f)/(k1.f-k0.f),k0.eo,k1.ei),A=sl(k0.qo,k0.qb,t),B=sl(k0.qb,k1.qa,t),C=sl(k1.qa,k1.qo,t);q=sl(sl(A,B,t),sl(B,C,t),t);}
+  const l=Math.hypot(q[0],q[1],q[2],q[3])||1;   // the original builds the matrix from the unnormalised result; the port rotates with a unit quaternion
+  return [-q[1]/l,-q[3]/l,-q[2]/l,q[0]/l];     // original (w,x,y,z) with y/z swapped coordinates -> the port's (x,y,z,w): P R P = R(-P n)
 }
 export function evalScalar(keys,f,def){const v=evalVec(keys,f,1,null);return v?v[0]:def;}

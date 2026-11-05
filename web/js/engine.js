@@ -1,7 +1,7 @@
 // engine.js - small software 3D engine: z-buffered perspective-correct triangle filler (texture / environment / bump / additive),
 // 3DS scene instances with keyframed cameras and objects. Everything is a pure function of the time handed in (no hidden state), so
 // any frame can be rendered after a seek.
-import {evalVec,evalRot,evalScalar} from './s3ds.js';
+import {evalVec,evalRot,evalScalar,ease} from './s3ds.js';
 
 export const W=320,H=240,VY=20,VH=200;           // 320x240 mode, 320x200 viewport centred (20 px bars)
 export const rad=Math.PI/180;
@@ -129,7 +129,7 @@ export class Scene3D{
       for(const m of this.meshes)if(m.node.morph){m.morphKeys=m.node.morph;for(const k of m.node.morph)if(k.name!==m.node.name&&this.byName[k.name])this.byName[k.name].hidden=true;}}   // the other targets are never drawn
     for(const m of this.meshes){
       if(m.morphKeys){const K=m.morphKeys;let i=0;while(i<K.length-2&&f>=K[i+1].f)i++;                                          // 3DS morph track: blend the two neighbouring targets
-        const a=this.byName[K[i].name]||m,b=this.byName[K[Math.min(i+1,K.length-1)].name]||m,t=K.length>1?Math.min(1,Math.max(0,(f-K[i].f)/Math.max(1,K[i+1].f-K[i].f))):0;
+        const a=this.byName[K[i].name]||m,b=this.byName[K[Math.min(i+1,K.length-1)].name]||m,t0=K.length>1?Math.min(1,Math.max(0,(f-K[i].f)/Math.max(1,K[i+1].f-K[i].f))):0,t=ease(t0,K[i].eout,K[Math.min(i+1,K.length-1)].ein);
         if(a.nv===m.nv&&b.nv===m.nv){for(let j=0;j<m.nv*3;j++){m.loc[j]=a.loc0[j]+(b.loc0[j]-a.loc0[j])*t;m.nrm[j]=a.nrm0[j]+(b.nrm0[j]-a.nrm0[j])*t;}}}
       const {p,q,s}=this.nodeXform(m.node,f);
       for(let i=0;i<m.nv;i++){const v=qrot(q,[m.loc[i*3]*s[0],m.loc[i*3+1]*s[1],m.loc[i*3+2]*s[2]]);m.wv[i*3]=v[0]+p[0];m.wv[i*3+1]=v[1]+p[1];m.wv[i*3+2]=v[2]+p[2];
