@@ -1,6 +1,8 @@
 // s3ds.js - 3D Studio (.3DS) loader + keyframer evaluation (TCB position, quaternion rotation), as used by HYPERVENTILATION's scenes.
 // Vertices are stored in world space in the file; every mesh node is re-expressed relative to its pivot so that the node
 // transform  M(f) = T(pos(f)) * R(rot(f)) * S(scl(f)) * T(-pivot)  gives world positions (identical to lib3ds).
+// the loader's static arrays (texture coordinates by vertex index, material by face index) are never cleared and live across files: parse the files in the original's load order
+const SU=new Float32Array(16384),SV=new Float32Array(16384),SM=new Array(16384).fill(null);
 export function parse3DS(buf){
   const dv=new DataView(buf), u8=new Uint8Array(buf);
   const sc={objects:[],materials:{},nodes:[],cams:{},lights:{},seg:[0,100],ambient:[0,0,0]};
@@ -22,7 +24,6 @@ export function parse3DS(buf){
     keys.flags=dv.getUint16(b,true);   // track flags: &3 = 0 once, 2 repeat (loop), 3 loop (with the last key equal to the first)
     return keys;
   }
-  const SU=new Float32Array(16384),SV=new Float32Array(16384),SM=new Array(16384).fill(null);
   function chunk(id,b,e){
     switch(id){
       case 0x4D4D: case 0x3D3D: case 0xB000: walk(b,e,chunk); break;

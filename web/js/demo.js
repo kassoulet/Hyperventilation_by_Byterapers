@@ -36,7 +36,9 @@ export class Demo{
     const files=['space2','0room3','morph','morph2','meta1','dmoykk2','tvfin','ball2','piikit2','hallu'];
     let done=0,total=names.size+files.length;
     await Promise.all([...names].map(async n=>{try{this.tex[n]=await loadTex(base+'img/'+n+'.png');}catch(e){console.log('missing texture',n);}done++;progress&&progress(done/total);}));
-    await Promise.all(files.map(async n=>{const b=await (await fetch(base+'3ds/'+n+'.3ds')).arrayBuffer();const sc=parse3DS(b);this.sc3[n]={sc,S:new Scene3D(sc)};this.sc3[n].S.anim=this.lanim[n];this.sc3[n].S.lrec=this.lrec;if(n==='0room3')this.sc3[n].S.planarUV=true;done++;progress&&progress(done/total);}));
+    const bufs={};await Promise.all(files.map(async n=>{bufs[n]=await (await fetch(base+'3ds/'+n+'.3ds')).arrayBuffer();done++;progress&&progress(done/total);}));
+    // the original's load order (hooked on the object builder 0x2d261): the static uv/material arrays carry over from file to file (WRITEUP-asm.md 47)
+    for(const n of ['morph','0room3','space2','piikit2','hallu','morph','morph2','meta1','dmoykk2','tvfin','ball2']){const sc=parse3DS(bufs[n]);if(this.sc3[n])continue;this.sc3[n]={sc,S:new Scene3D(sc)};this.sc3[n].S.anim=this.lanim[n];this.sc3[n].S.lrec=this.lrec;if(n==='0room3')this.sc3[n].S.planarUV=true;}
     for(const S of SCENES)if(S.init)S.init(this);
   }
   // sprite state at time t from the script events (start/stop/fades)
