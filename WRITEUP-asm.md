@@ -486,3 +486,7 @@ The kid photo over the lava tunnel (sprite record with `skenenp2.png`, texel 0 s
 ## 39. Portrait photo: no zoom, and the room's flares sit under it
 
 The photo of the portrait scene (51.1-58.2 s) was drawn with a zoom `1 + 0.02 lt` that nothing measured (57.5 s is insensitive to it, the photo has faded out): scanning the zoom at 52.5 s the error has its minimum at exactly 1.0 (2.12; 1.01 gives 3.6, 0.99 4.1), so it is a plain 1:1 sprite. The room's lens flares are drawn by the room callback, before the photo sprite, so they are blended under the photo's alpha like the rest of the room; the port drew them on top (hexagons absent from the reference). 52.5 s 6.5 -> 1.7, mean 2.59 -> 2.47.
+
+## 40. Room camera clock: render tick = call tick - 7
+
+The room's keyframe frame was `trunc(1.2*lt*70)`; the other scenes already use the tick of the frame boundary minus 7 (section 26) and the space scene `t*70-7`. Scanning an offset on the room frame at 47.5 s gives a minimum at exactly -7 ticks (error 5.3 -> 2.1; neighbours 2.6-3.2, the frame is quantised by the trunc), and it also helps the portrait frames that render the room underneath (52.5 s 1.72 -> 1.46, 57.5 s 0.49 -> 0.32). Mean 2.47 -> 2.37.

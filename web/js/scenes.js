@@ -351,7 +351,7 @@ export const SCENES=[
  {name:'lava tunnel',t0:30.1,t1:44.3,tex:['forcemao','forcemap'],
   render(d,R,lt,t){tunnel(d,R,d.tex['forcemap'],Math.max(0,lt*TICK-7));}},
  {name:'room',t0:44.3,t1:51.1,tex:['seina','plate','lattia','0floor','0reuna','pylvas','seina2','rako','6','hissi'],
-  render(d,R,lt,t){const {S}=S3(d,'0room3');const f=Math.trunc(1.2*lt*TICK);S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;R.fogT=d.fogT;drawScene(R,S,cam,d.mats('0room3'),{frame:f,t,fogK:d.fogAt(t)});}},
+  render(d,R,lt,t){const {S}=S3(d,'0room3');const f=Math.trunc(1.2*Math.max(0,lt*TICK-7));S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;R.fogT=d.fogT;drawScene(R,S,cam,d.mats('0room3'),{frame:f,t,fogK:d.fogAt(t)});}},
  {name:'portrait',t0:51.1,t1:58.2,tex:['purple'],
   render(d,R,lt,t){const room=SCENES[2];room.render(d,R,t-room.t0,t);d.drawFlares(t);const bg=R.fb.slice(),f=d.fadeOf(39,t);   // the room callback keeps running under the photo, which is alpha-blended with sprite 39's fade
    blit(R,d.tex['purple'],0,t,1,0,0);if(f<1)for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=R.fb[o],q=bg[o];R.fb[o]=0xff000000|(((((p>>16)&255)*f+((q>>16)&255)*(1-f))|0)<<16)|(((((p>>8)&255)*f+((q>>8)&255)*(1-f))|0)<<8)|(((p&255)*f+(q&255)*(1-f))|0);}}},
