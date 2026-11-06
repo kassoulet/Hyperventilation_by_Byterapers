@@ -5,6 +5,7 @@ import {SCENES,autoMats,setPSeeds} from './scenes.js';
 import {initHole} from './holefx.js';
 const XL=0;const FBDEPTH=3;
 const FLIPS=new Map([['lava tunnel',7],['room',7],['portrait',7],['hallu',0],['hallu2',0],['piikit',0],['piikit2',0],['space',0],['blob',7],['photos',0],['balls',7],['tv',7]]);   // scene -> lag (ticks) its clock formula assumes   // scenes whose reference frames show the 21-tick flip lag (checked on 32.5/37.5/42.5 s in the emulator; the other scenes' clocks were fitted with the constant 7-tick lag)
+const KICK=[10.137,7.802,5.77,4.044,2.624,1.509,0.703,0.199,0.005];   // degrees, see Demo.kickK
 const BLO=0.3;   // fitted: the beat blur seen in the reference frames is the one of the call ~0.3 s earlier (72.5 s 17 -> 14; single-frame fit)
 let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
 //   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
@@ -61,6 +62,10 @@ export class Demo{
     const dur=best.c/70;if(best.a===6)return {col:best.b,a:Math.min(1,Math.max(0,(t-t0)/Math.max(dur,0.05)))};   // 6 = fade TO the colour (and it stays), 7 = flash from it
     const a=1-(t-t0)/Math.max(dur,0.05);return a>0?{col:best.b,a}:null;
   }
+  // beat zoom: on each blur burst (blur.json, 9 calls of 7 ticks) the engine's camera FOV is cut by KICK[i] degrees at call i after the burst's first, decaying quadratically (measured from the engine matrix 0x149914 in the emulator,
+  // 100.8-114.9 s: row norm 1.4864, 1.4229, ... 1.2349 for the 78 degree metaball camera). Returns the focal-length factor tan(fov/2)/tan((fov-kick)/2).
+  kickK(t,fov){const B=this.blur;let lo=0,hi=B.length;while(lo<hi){const m=(lo+hi)>>1;if(B[m][0]<=t-0.05)lo=m+1;else hi=m;}let k=lo-1;if(k<0)return 1;
+    while(k>0&&B[k][0]-B[k-1][0]<0.15)k--;const i=Math.round((t-B[k][0])*10)-1;if(i<0||i>=KICK.length)return 1;const r=Math.PI/360;return Math.tan(fov*r)/Math.tan((fov-KICK[i])*r);}
   fogAt(t){const a=this.fog;let lo=0,hi=a.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(a[m][0]<=t)lo=m;else hi=m-1;}const r=a[lo];return r[1]?r[2]:0;}
   mats(n){return this._m[n]||(this._m[n]=autoMats(this,this.sc3[n].sc));}
   currentScene(t){for(const S of SCENES)if(t>=S.t0&&t<S.t1)return S;return null;}
@@ -74,7 +79,7 @@ export class Demo{
     const t0=t;
     const S0=window.demoTest&&this.currentScene(t);const base=S0&&(FLIPS.get(S0.name)??(S0.name==='swirl'&&t<132.9?7:undefined));if(base!==undefined){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+base)/70;}
     this.call=window.demoTest?3*Math.floor(Math.round(t0*10)/3):Math.round(t0*10);   // call of the original whose output is shown (test mode: the 21-tick buffer ring)
-    this.t=t;const R=this.R;R.clear(0);R.cam=null;R.fogT=null;
+    this.t=t;this.blurT=undefined;const R=this.R;R.clear(0);R.cam=null;R.fogT=null;
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);
     // 2D layers
@@ -114,7 +119,7 @@ export class Demo{
       for(const [r,g,b,sw,pos] of GHOSTS)blit(lens,159.5-pos*dx,VY+99.5-pos*dy,sw,[Math.trunc(cr/255*q*r),Math.trunc(cg/255*q*g),Math.trunc(cb/255*q*b)],true);}
   }
   // 0x43d00 / 0x49bcd: horizontal box blur of every row of the 320x200 viewport, window [x-r, x+r] clipped at the borders and normalised by its size, per channel (truncated); the radius is random per call
-  applyBlur(t){t-=BLO;
+  applyBlur(t){t=this.blurT!==undefined?this.blurT:t-BLO;
     const B=this.blur;if(!B)return;let lo=0,hi=B.length;while(lo<hi){const m=(lo+hi)>>1;if(B[m][0]<t-1e-4)lo=m+1;else hi=m;}
     const rec=B[lo];if(!rec||rec[0]-t>=0.1||rec[1]<=0)return;const r=rec[1],fb=this.R.fb,tmp=new Uint32Array(W);
     for(let y=0;y<VH;y++){const o=(VY+y)*W;

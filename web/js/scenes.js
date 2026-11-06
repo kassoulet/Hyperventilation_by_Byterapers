@@ -123,13 +123,16 @@ function ballField(bp,EXT,NG,HG,Rb){
 }
 const rowAt=(d,t)=>{const rows=d.xm.rows;let lo=0,hi=rows.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(rows[m][2]<=t)lo=m;else hi=m-1;}return rows[lo];};
 function metaballs(d,R,t,lt){
+  // reference grabs (test mode): the shown frame is the render of the 21-tick ring, whose clock IS the boundary tick (tick 126/476/826 at 102.5/107.5/112.5 minus the ring lag 14/7/0 ticks; checked with fits of
+  // the ball phases at those three frames); the song row, the beat zoom and the beat blur are then those of that call, not of the grab time
+  if(window.demoTest){const T=Math.round(t*70);t=21*Math.floor(T/21)/70;lt=t-100.7+0.1;d.blurT=t;}
   const bg=d.tex['metanain'],fb=R.fb;fb.fill(0xff000000);for(let y=0;y<200;y++)for(let x=150;x<W;x++)fb[(y+VY)*W+x]=bg.d[y*bg.w+x]|0xff000000;
-  const rw=rowAt(d,t-0.3),f=(rw[0]*64+rw[1]-0x740)*10,tk=Math.floor(lt*70),md=x=>((x%1024)+1024)%1024;
+  const rw=rowAt(d,t-(window.demoTest?0.1:0.3)),f=(rw[0]*64+rw[1]-0x740)*10,tk=Math.round((lt-0.1)*70),md=x=>((x%1024)+1024)%1024;
   const E=EXT*0.4,bp=[];
   for(let i=0;i<5;i++){const A=md(MB1[i]*tk),B=md(MB2[i]*tk),C=md(MB2[i]*tk),k=Math.PI/512;
     bp.push([E*Math.sin(((A+B+C)&1023)*k),E*Math.cos(((A+C)&1023)*k),E*Math.sin(((B-(C>>1))&1023)*k)]);}
   const g=ballField(bp,EXT,NG,HG,EXT*0.55);
-  const S=d.sc3['meta1'].S,cam=S.camera('Camera01',f),nd=S.sc.nodes.find(n=>n.name==='meta');if(!cam)return;const {p}=S.nodeXform(nd,f),fz=197.583;
+  const S=d.sc3['meta1'].S,cam=S.camera('Camera01',f),nd=S.sc.nodes.find(n=>n.name==='meta');if(!cam)return;const {p}=S.nodeXform(nd,f),fz=197.583*d.kickK(t,78);
   isoMesh(R,g,{EXT,NG,HG,ISO,MC:d.mc,mat:{tex:d.tex['isomap'],env:d.tex['envi2'],mode:3,envk:1,r:1,g:1,b:1},
     proj(P,n){const w=[P[0]+p[0],P[2]+p[2]*0+p[1],P[1]+p[2]];const wv=cam.toView([P[0]+p[0],P[2]+p[1],P[1]+p[2]]),vn=cam.dirToView([n[0],n[2],n[1]]),l=Math.hypot(vn[0],vn[1],vn[2])||1;if(wv[2]<1)return null;
       return [W/2-0.5+fz*wv[0]/wv[2],VY+VH/2-0.5-fz*wv[1]/wv[2],1/wv[2],vn[0]/l,vn[1]/l];},
