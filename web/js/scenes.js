@@ -381,7 +381,7 @@ export const SCENES=[
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
   render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.2)*TICK);   // camera frame = scene tick of the render shown (tick 308 for the 162.5 s grab: hook of the render at 11361 = 21*541, see fb.py trace)
-   S.pose(f);const cam=S.camera("Camera01",f);const mf=d.mats('tvfin'),fbm=d.fbTex&&{tex:d.fbTex,mode:1,unlit:true,us:317.5/320,vs:197.5/200};
+   S.pose(f);const cam=S.camera("Camera01",f);const mf=d.mats('tvfin'),fbm=d.fbTex&&{tex:d.fbTex,mode:1,unlit:true,fx:true,us:317.5/320,vs:197.5/200};
    if(cam)drawScene(R,S,cam,fbm?(n=>n==='FEEDBACK'?fbm:mf(n)):mf,{frame:f,t,fogK:d.fogAt(t),cull:false});if(cam)drawParticles(d,R,S,cam,0,tvField(Math.floor(t*10+1e-6)-TVLAG));}},
  {name:'flesh',t0:172.0,t1:185.8,tex:['metamap0','metaenv0','bumpidx'],
   render(d,R,lt,t){isoScene2(d,R,lt,t);}},
