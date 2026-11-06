@@ -7,7 +7,7 @@ const XL=0;const FBDEPTH=3;
 const FLIPS=new Map([['lava tunnel',7],['room',7],['portrait',7],['hallu',0],['hallu2',0],['piikit',0],['piikit2',0],['space',0],['blob',7],['photos',0],['balls',7],['tv',7]]);   // scene -> lag (ticks) its clock formula assumes   // scenes whose reference frames show the 21-tick flip lag (checked on 32.5/37.5/42.5 s in the emulator; the other scenes' clocks were fitted with the constant 7-tick lag)
 const KICK=[10.137,7.802,5.77,4.044,2.624,1.509,0.703,0.199,0.005];   // degrees, see Demo.kickK
 const BLO=0.3;   // fitted: the beat blur seen in the reference frames is the one of the call ~0.3 s earlier (72.5 s 17 -> 14; single-frame fit)
-let FD=0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
+let FD=0.19;const FD0=()=>window.FD0!==undefined?window.FD0:0.19;const FDTV=0.45;   // after 157.8 s the sprite events act ~0.45 s late (fitted on 20 emulator frames 160.4-168; the earlier 0.19 was measured at 122 s)
 //   // sprite fades start ~2 frames after the script event (measured: 122.136 event, first alpha step at 122.33)
 const GHOSTS=[[35,10,53,20,3.1],[18,22,53,16,1.9],[52,2,10,24,1.3],[12,50,10,12,0.7],[3,24,27,14,0.34],[33,24,47,32,-0.2],[20,50,10,16,-0.35],[50,3,26,20,-0.9],[5,21,40,28,-1.5],[35,11,20,48,-2.3]];   // r,g,b multiplier, size, position along the axis (0x106b08, stride 0x14)
 export class Demo{
@@ -42,7 +42,7 @@ export class Demo{
   // sprite state at time t from the script events (start/stop/fades)
   songRow(t){const R=this.xm.rows;let lo=0,hi=R.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(R[m][2]<=t)lo=m;else hi=m-1;}return R[lo][0]*64+R[lo][1];}   // [0x10eb78]*64+[0x10eb80]
   spritesAt(t){
-    FD=t>157.8?FDTV:0.19;
+    FD=t>157.8?FDTV:FD0();
     const ev=this.script.events,sp=this.script.sprites,out=[];
     const st={};
     for(const e of ev){
@@ -93,8 +93,10 @@ export class Demo{
       const fbp=R.fb;if(f.q!==undefined){const q=f.q,iq=255-q;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];fbp[o]=0xff000000|((((p>>16)&255)*iq>>8)+(fb*q>>8))<<16|((((p>>8)&255)*iq>>8)+(fg*q>>8))<<8|(((p&255)*iq>>8)+(fr*q>>8));}}else for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
     this.u32.set(R.fb);this.ctx.putImageData(this.img,0,0);
   }
-  fadeOf(id,t){FD=t>157.8?FDTV:0.19;const o=this.spritesAt(t).find(x=>x.id===id);if(!o)return 0;let a=o.nx.alpha;const s=o.s;
-    if(s.fin)a*=Math.min(1,Math.max(0,(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70)));if(s.fout)a*=1-Math.min(1,Math.max(0,(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70)));return a;}
+  // sprite fade progress: the fader timer (0x22a7f) counts 7 ticks per call from the second call after the event; the grab shows the 21-tick ring call (section 41)
+  fk(t,f){if(!window.demoTest||t>157.8)return (t-f[0]-FD)/(Math.max(f[1],1)/70);const T=Math.round(t*70),tr=21*Math.floor(T/21),st=7*Math.ceil(f[0]*70/7)+7;return (tr-st)/Math.max(f[1],1);}
+  fadeOf(id,t){FD=t>157.8?FDTV:FD0();const o=this.spritesAt(t).find(x=>x.id===id);if(!o)return 0;let a=o.nx.alpha;const s=o.s;
+    if(s.fin)a*=Math.min(1,Math.max(0,this.fk(t,s.fin)));if(s.fout)a*=1-Math.min(1,Math.max(0,this.fk(t,s.fout)));return a;}
   // Lens flares (0x31180): per flagged light a glow sprite (additive, colour*alpha) and, when the engine flag 8 is set and the glow is big enough, ten flat-coloured hexagons along the line through the screen centre.
   drawFlares(t){
     const R=this.R,cam=R.cam,F=this.flares;if(!cam||!F)return;
@@ -136,8 +138,8 @@ export class Demo{
       const tex=this.tex[spr.img&&spr.img.replace(/\.png$/i,'')];if(!tex)continue;
       if(spr.img==='purple.png')continue;   // drawn by the portrait scene, which applies this sprite's fade (fadeOf)
       let a=nx.alpha;   // photo alpha as in the sprite table (0.4-0.55 plateau measured against the original; kind 1 = abba41-2, the full-opacity photo of the 114.7 s lyric scene)
-      if(s.fin){const k=(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70);a*=Math.min(1,Math.max(0,k));}
-      if(s.fout){const k=(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70);a*=1-Math.min(1,Math.max(0,k));}
+      if(s.fin){const k=this.fk(t,s.fin);a*=Math.min(1,Math.max(0,k));}
+      if(s.fout){const k=this.fk(t,s.fout);a*=1-Math.min(1,Math.max(0,k));}
       a*=sa;if(a<=0)continue;
       const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&(nx.flags===4||!(tex.w>=320&&tex.h>=200));   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given

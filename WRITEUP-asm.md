@@ -490,3 +490,7 @@ The photo of the portrait scene (51.1-58.2 s) was drawn with a zoom `1 + 0.02 lt
 ## 40. Room camera clock: render tick = call tick - 7
 
 The room's keyframe frame was `trunc(1.2*lt*70)`; the other scenes already use the tick of the frame boundary minus 7 (section 26) and the space scene `t*70-7`. Scanning an offset on the room frame at 47.5 s gives a minimum at exactly -7 ticks (error 5.3 -> 2.1; neighbours 2.6-3.2, the frame is quantised by the trunc), and it also helps the portrait frames that render the room underneath (52.5 s 1.72 -> 1.46, 57.5 s 0.49 -> 0.32). Mean 2.47 -> 2.37.
+
+## 41. Sprite fades use the same integer timer and ring call as the fader
+
+The sprite fade-in/out commands (4/5) are handled by the same timer machinery as the colour fader (section 37): the timer advances 7 ticks per call, from the second call (on the 7-tick grid from tick 0) after the script event, and the grab shows the 21-tick ring call `21*floor(T/21)`. The port's fixed 0.19 s delay (fitted at 122 s) is the average of this. With `k = (ring - (7*ceil(E/7) + 7)) / c` ticks (E = event tick, c = the command's duration) 7.5 s 5.8 -> 3.5, 27.5 s 2.5 -> 1.4, 52.5 s 1.46 -> 0.85, 122.5 s 2.27 -> 1.72; offsets +-3 ticks of the start are all worse on 3 of the 4 frames. After 157.8 s the old fitted 0.45 s delay is kept (that scene has a different phase of the ring); start/stop events keep 0.19 s. Mean 2.37 -> 2.25.
