@@ -142,7 +142,7 @@ export class Demo{
       const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&(nx.flags===4||!(tex.w>=320&&tex.h>=200));   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
-      if(w>=320&&h>=200){x0=0;y0=VY;}
+      if(w>=320&&h>=200){const k=spr.kind===2&&nx.flags===0?1:0;x0=k;y0=VY+k;}   // the colour-keyed (texel 0 skipped) blitter starts one pixel in, like the jittered strips (skenenp2.png over the lava tunnel: 37.5 s 7.0 -> 1.3, 42.5 s 7.1 -> 1.4)
       else{ // 0x22145: a coordinate of -1 / -2 means left|top / right|bottom edge of the 320x200 viewport (centre = w/2 or 320-w/2, 200-h/2)
         x0=spr.x>=0?Math.round(spr.x-w/2):spr.x===-1?XL:320-w;y0=VY+(spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?0:200-h);
         const j=this.jit.get(this.call*64+id);if(j){x0=Math.floor(j[2]-w/2)+1;y0=VY+Math.floor(j[3]-h/2)+1;if(j[4]>=0)a*=0.9+0.2*j[4]/256;}}
