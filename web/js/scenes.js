@@ -357,7 +357,7 @@ export const SCENES=[
    blit(R,d.tex['purple'],0,t,1,0,0);if(f<1)for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=R.fb[o],q=bg[o];R.fb[o]=0xff000000|(((((p>>16)&255)*f+((q>>16)&255)*(1-f))|0)<<16)|(((((p>>8)&255)*f+((q>>8)&255)*(1-f))|0)<<8)|(((p&255)*f+(q&255)*(1-f))|0);}}},
  {name:'blob',t0:58.2,t1:72.55,tex:['keltanai','moykymap','moykyenv'],
   render(d,R,lt,t){blit(R,d.tex['keltanai'],0,t,1,0,0);const {S}=S3(d,'dmoykk2');const f=Math.trunc(100+Math.max(0,lt*TICK-7));S.pose(f);
-    const cam=S.camera('Camera01',f)||S.camera(Object.keys(S.sc.cams)[0],f);if(cam)drawScene(R,S,cam,d.mats('dmoykk2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
+    const cam=S.camera('Camera01',f)||S.camera(Object.keys(S.sc.cams)[0],f);if(cam){cam.focal*=d.kickK(t-0.1,cam.fov);}if(cam)drawScene(R,S,cam,d.mats('dmoykk2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
  {name:'hallu',t0:72.55,t1:83.1,tex:['ruoho','0ikkuna','marmori2','envgreen'],render(d,R,lt,t){this.draw(d,R,t,70*(lt+0.05));},   /* the original's scene tick restarts at 72.4 but its first frame appears at ~72.55 */
   draw(d,R,t,tick){const {S}=S3(d,'hallu');const f=Math.trunc(tick*1.2);   // the callback 0x1e7d8 sets frame = trunc(1.2*scene tick)
    S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;cam.focal=cam.pfocal;
