@@ -116,7 +116,7 @@ export class Scene3D{
       const nf=o.faces.length/3,nrm=new Float32Array(nv*3);
       for(let i=0;i<nf;i++){const a=o.faces[i*3],b=o.faces[i*3+1],c=o.faces[i*3+2];
         const e1=[loc[b*3]-loc[a*3],loc[b*3+1]-loc[a*3+1],loc[b*3+2]-loc[a*3+2]],e2=[loc[c*3]-loc[a*3],loc[c*3+1]-loc[a*3+1],loc[c*3+2]-loc[a*3+2]];
-        const fn=cross(e1,e2);for(const v of [a,b,c]){nrm[v*3]+=fn[0];nrm[v*3+1]+=fn[1];nrm[v*3+2]+=fn[2];}}
+        const fn=norm(cross(e1,e2));for(const v of [a,b,c]){nrm[v*3]+=fn[0];nrm[v*3+1]+=fn[1];nrm[v*3+2]+=fn[2];}}
       const faceMat=new Array(nf).fill(null);for(const mm of o.mat)for(const f of mm.faces)faceMat[f]=mm.name;if(o.faceMatFull)for(let i=0;i<nf;i++)if(faceMat[i]===null)faceMat[i]=o.faceMatFull[i];
       this.meshes.push({node:n,obj:o,loc,nrm,loc0:loc.slice(),nrm0:nrm.slice(),nv,nf,faceMat,wv:new Float32Array(nv*3),wn:new Float32Array(nv*3)});
     }
