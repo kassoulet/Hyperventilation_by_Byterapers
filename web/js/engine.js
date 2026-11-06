@@ -113,10 +113,11 @@ export class Scene3D{
       for(let i=0;i<nv;i++){const d=[o.verts[i*3]-org[0]-n.pivot[0]*0,o.verts[i*3+1]-org[1],o.verts[i*3+2]-org[2]];
         loc[i*3]=dot(d,bx)-n.pivot[0];loc[i*3+1]=dot(d,by)-n.pivot[1];loc[i*3+2]=dot(d,bz)-n.pivot[2];}
       // smooth vertex normals (position-welded face-normal average)
-      const nf=o.faces.length/3,nrm=new Float32Array(nv*3);
+      const nf=o.faces.length/3,nrm=new Float32Array(nv*3),cnt=new Float32Array(nv);
       for(let i=0;i<nf;i++){const a=o.faces[i*3],b=o.faces[i*3+1],c=o.faces[i*3+2];
         const e1=[loc[b*3]-loc[a*3],loc[b*3+1]-loc[a*3+1],loc[b*3+2]-loc[a*3+2]],e2=[loc[c*3]-loc[a*3],loc[c*3+1]-loc[a*3+1],loc[c*3+2]-loc[a*3+2]];
-        const fn=norm(cross(e1,e2));for(const v of [a,b,c]){nrm[v*3]+=fn[0];nrm[v*3+1]+=fn[1];nrm[v*3+2]+=fn[2];}}
+        const fn=norm(cross(e1,e2));for(const v of [a,b,c]){nrm[v*3]+=fn[0];nrm[v*3+1]+=fn[1];nrm[v*3+2]+=fn[2];cnt[v]++;}}
+      for(let v=0;v<nv;v++)if(cnt[v])for(let k=0;k<3;k++)nrm[v*3+k]/=cnt[v];   // 0x2de6b: sum / face count, NOT renormalised (the lighter's D.N uses this shortened normal)
       const faceMat=new Array(nf).fill(null);for(const mm of o.mat)for(const f of mm.faces)faceMat[f]=mm.name;if(o.faceMatFull)for(let i=0;i<nf;i++)if(faceMat[i]===null)faceMat[i]=o.faceMatFull[i];
       this.meshes.push({node:n,obj:o,loc,nrm,loc0:loc.slice(),nrm0:nrm.slice(),nv,nf,faceMat,wv:new Float32Array(nv*3),wn:new Float32Array(nv*3)});
     }
@@ -168,13 +169,15 @@ export class Scene3D{
 // ---------------------------------------------------------------- mesh rendering
 const NEAR=4;
 const tmp=[0,1,2].map(()=>new Float32Array(12));
-function clipTri(P,out){ // P: 3 arrays (cam-space attributes stride 12: x y z u v r g b nx ny nz) ; returns polys as lists
-  const inside=P.map(p=>p[2]>=NEAR);const n=inside.filter(Boolean).length;
-  if(n===3){out.push(P);return;}if(n===0)return;
-  const poly=[];
-  for(let i=0;i<3;i++){const a=P[i],b=P[(i+1)%3],ia=inside[i],ib=inside[(i+1)%3];
-    if(ia)poly.push(a);
-    if(ia!==ib){const t=(NEAR-a[2])/(b[2]-a[2]);const c=new Float32Array(12);for(let k=0;k<12;k++)c[k]=a[k]+(b[k]-a[k])*t;c[2]=NEAR;poly.push(c);}}
+// The original clips every polygon against the near plane and the four screen planes (the clipped vertices in the emulator sit at screen x = -0.5 / 319.5, y = -0.5 / 199.5,
+// attributes lerped along the 3D edge) BEFORE the screen-space gouraud setup (0x530a2), so a vertex colour interpolates affinely over the clipped polygon only, not over the whole triangle.
+function clipPoly(poly,pl){const o=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=pl[0]*a[0]+pl[1]*a[1]+pl[2]*a[2]-pl[3],db=pl[0]*b[0]+pl[1]*b[1]+pl[2]*b[2]-pl[3];
+  if(da>=0)o.push(a);
+  if((da>=0)!==(db>=0)){const t=da/(da-db),c=new Float32Array(12);for(let k=0;k<12;k++)c[k]=a[k]+(b[k]-a[k])*t;o.push(c);}}return o;}
+function clipTri(P,out,fz){ // P: 3 arrays (cam-space attributes stride 12: x y z u v r g b nx ny nz) ; returns polys as lists
+  let poly=P;if(!P.every(p=>p[2]>=NEAR&&Math.abs(p[0])*fz<=W/2*p[2]&&Math.abs(p[1])*fz<=VH/2*p[2])){
+    const hw=W/2,hh=VH/2;
+    for(const pl of [[0,0,1,NEAR],[fz,0,hw,0],[-fz,0,hw,0],[0,fz,hh,0],[0,-fz,hh,0]]){poly=clipPoly(poly,pl);if(poly.length<3)return;}}
   for(let i=1;i+1<poly.length;i++)out.push([poly[0],poly[i],poly[i+1]]);
 }
 export const lightsDefault=[{dir:norm([0.4,-0.6,0.7]),col:[1,1,1]}];
@@ -191,7 +194,7 @@ export function drawScene(R,S,cam,matFor,opts){
       if(m.obj.uv){a[3]=m.obj.uv[i*2];a[4]=1-m.obj.uv[i*2+1];}
       a[8]=nn[0]/nl;a[9]=nn[1]/nl;a[10]=nn[2]/nl;
       // lighting: the original's per-vertex model (0x463ec/0x4672b), see WRITEUP-asm.md snippet 7
-      const wn=norm([m.wn[i*3],m.wn[i*3+1],m.wn[i*3+2]]);
+      const wn=[m.wn[i*3],m.wn[i*3+1],m.wn[i*3+2]];
       let lr=amb[0]+2,lg=amb[1]+2,lb=amb[2]+2;
       for(const L of lights){const dx=L.pos[0]-w[0],dy=L.pos[1]-w[1],dz=L.pos[2]-w[2];const dot=dx*wn[0]+dy*wn[1]+dz*wn[2];if(!(dot>0))continue;
         const d2=dx*dx+dy*dy+dz*dz;if(d2>L.out2)continue;
@@ -217,7 +220,7 @@ export function drawScene(R,S,cam,matFor,opts){
         const fl=m.obj.fflags[i]&7,uv=(i&1)?(fl===3?[1,0,0,1,1,1]:[1,1,1,0,0,1]):[1,0,0,0,0,1];
         P=P.map((c,k)=>{const q=Float32Array.from(c);q[3]=uv[k*2];q[4]=uv[k*2+1];return q;});}
       if(mat.us){P=P.map(c=>{const q=Float32Array.from(c);q[3]*=mat.us;q[4]=(1-q[4])*mat.vs;return q;});}   // FEEDBACK faces (0x42f04): the previous frame (320x200) mapped with the face's own UVs scaled to 317.5 x 197.5 texels
-      out.length=0;clipTri(P,out);
+      out.length=0;clipTri(P,out,fz);
       for(const T of out){
         const ul=mat.unlit||o.unlit;
         const s=T.map(p=>{const q=new Float32Array(12);const iz=1/p[2];q[0]=W/2+fz*p[0]*iz;q[1]=VY+VH/2-fz*p[1]*iz;q[2]=iz;q[3]=p[3]*iz;q[4]=p[4]*iz;q[5]=ul?1:p[5];q[6]=ul?1:p[6];q[7]=ul?1:p[7];q[8]=p[8]*0.5+0.5;q[9]=0.5-p[9]*0.5;return q;});

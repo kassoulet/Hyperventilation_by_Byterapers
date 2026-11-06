@@ -22,4 +22,4 @@ for(const t of ts){
   if(r.result.exceptionDetails){console.log('ERR',JSON.stringify(r.result.exceptionDetails).slice(0,500));continue;}
   const d=r.result.result.value;fs.writeFileSync(path.join(out,'t'+String(t.toString().includes('.')?t.toFixed(2):t+'.00').padStart(7,'0')+'.png'),Buffer.from(d.split(',')[1],'base64'));
 }
-ch.kill();srv.close();process.exit(0);
+if(process.env.POST){const r=await send("Runtime.evaluate",{expression:process.env.POST,returnByValue:true});fs.writeFileSync(process.env.POSTOUT,JSON.stringify(r.result.result.value));}ch.kill();srv.close();process.exit(0);
