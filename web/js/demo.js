@@ -72,12 +72,12 @@ export class Demo{
   // The reference frames are grabbed from the original's screen buffer, which the flip routine only refreshes on every 3rd main-loop iteration (ticks multiple of 21,
   // measured in the emulator at 37.5/42.5 s: the buffers at the boundaries 2954..2975 are identical, the content is the render made at tick 2961 = 21*floor(2975/21)).
   // All scene clocks of the port already assume the shown frame was rendered 7 ticks before the boundary, hence the correction. Only in test mode (?test=1, the golden grabs) and only for the scenes in FLIPS.
-  renderAt(t,depth=0){
+  renderAt(t,depth=0,raw=false){
     // the tv faces of the original show the previous rendered frame (7 ticks earlier, 320x200 viewport of the other buffer; see 0x42f04): render it first (depth-limited, it is mostly dark by then)
     this.fbTex=null;const Sv=this.currentScene(t);
-    if(Sv&&Sv.name==='tv'&&depth<FBDEPTH){this.renderAt(t-0.1,depth+1);this.fbTex=new Tex(W,VH,this.R.fb.slice(VY*W,(VY+VH)*W));}
+    if(Sv&&Sv.name==='tv'&&depth<FBDEPTH){const T=Math.round(t*70);this.renderAt(window.demoTest?t+(21*Math.floor(T/21)-T+7)/70-0.1:t-0.1,depth+1,true);{const L=new Uint32Array(W*VH);L.set(this.R.fb.subarray(VY*W+64,(VY+VH)*W));this.fbTex=new Tex(W,VH,L);}}   // the mapper reads the other buffer 64 pixels further (texture base = buffer + 0x100 bytes, checked texel by texel in the emulator)
     const t0=t;
-    const S0=window.demoTest&&this.currentScene(t);const base=S0&&(FLIPS.get(S0.name)??(S0.name==='swirl'&&t<132.9?7:undefined));if(base!==undefined){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+base)/70;}
+    const S0=window.demoTest&&!raw&&this.currentScene(t);const base=S0&&(FLIPS.get(S0.name)??(S0.name==='swirl'&&t<132.9?7:undefined));if(base!==undefined){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+base)/70;}
     this.call=window.demoTest?3*Math.floor(Math.round(t0*10)/3):Math.round(t0*10);   // call of the original whose output is shown (test mode: the 21-tick buffer ring)
     this.t=t;this.blurT=undefined;const R=this.R;R.clear(0);R.cam=null;R.fogT=null;
     const S=this.currentScene(t);
