@@ -57,7 +57,7 @@ export class Demo{
     return out;
   }
   flashAt(t){ // flash_color events: colour, duration in ticks (70 Hz)
-    let best=null;for(const e of this.script.events){if(e.t+0.26>t)break;if(e.type===3&&e.fn===0x222c4&&(e.a===7||e.a===6))best=e;}
+    let best=null;for(const e of this.script.events){if(e.t+0.26>t)break;if(e.type===3&&e.fn===0x222c4){if(e.a===7||e.a===6)best=e;else if(e.a===8)best=null;}}   // command 8 stops the fader (the 200-tick fade-in from black at t=0 is cut at 1.76 s: the reference is at full brightness from 2.2 s)
     if(!best)return null;let t0=best.t;const sc=this.currentScene(t);if(sc&&sc.t0>=t0&&sc.t0-t0<0.2)t0=sc.t0;else t0+=0.26;   // the original starts the fade at the first frame after the event (the scene's reset tick)
     const dur=best.c/70;
     if(window.demoTest&&sc&&sc.name==='flesh'&&best.a===6){   // fader 0x22a7f: timer += 7 per call from the call two after the event's, alpha = trunc(255*timer/dur), blend (src*(255-a)>>8)+(col*a>>8) (table 0x15a218); the grab shows the 21-tick ring call
