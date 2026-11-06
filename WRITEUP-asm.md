@@ -482,3 +482,7 @@ At 182.5 s the background was 189 against the reference's 177. The fader (0x22a7
 ## 38. Colour-keyed full-viewport sprite starts one pixel in
 
 The kid photo over the lava tunnel (sprite record with `skenenp2.png`, texel 0 skipped, 320x200) was exactly one pixel up/left of the reference (luma shift search: (+1,+1), residual 0.4). It goes through the same colour-keyed blitter as the jittered strips, which starts at `floor(x0)+1` (section on sprite jitter), so the full-viewport case is drawn at (1, 1) too; the alpha-blended full-viewport photos (lavalla, abba, purple) and the additive sos2 stay at (0, 0) (shifting them made 7.5, 17.5, 27.5, 117.5, 122.5 worse). 37.5 s 7.0 -> 1.3, 42.5 s 7.1 -> 1.4, mean 2.90 -> 2.59.
+
+## 39. Portrait photo: no zoom, and the room's flares sit under it
+
+The photo of the portrait scene (51.1-58.2 s) was drawn with a zoom `1 + 0.02 lt` that nothing measured (57.5 s is insensitive to it, the photo has faded out): scanning the zoom at 52.5 s the error has its minimum at exactly 1.0 (2.12; 1.01 gives 3.6, 0.99 4.1), so it is a plain 1:1 sprite. The room's lens flares are drawn by the room callback, before the photo sprite, so they are blended under the photo's alpha like the rest of the room; the port drew them on top (hexagons absent from the reference). 52.5 s 6.5 -> 1.7, mean 2.59 -> 2.47.

@@ -86,7 +86,7 @@ export class Demo{
     const S=this.currentScene(t);
     if(S)S.render(this,R,t-S.t0,t);
     // 2D layers
-    this.drawFlares(t);
+    if(!S||S.name!=="portrait")this.drawFlares(t);   // the portrait scene draws the room's flares itself, under the photo
     if(!(S&&S.under&&t<147.55))this.drawSprites(t);
     this.applyBlur(t);
     const f=this.flashAt(t);if(f){const c=f.col,fr=(c>>16)&255,fg=(c>>8)&255,fb=c&255;// colour order in the script is 0xRRGGBB
