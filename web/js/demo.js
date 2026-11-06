@@ -82,7 +82,7 @@ export class Demo{
     this.fbTex=null;const Sv=this.currentScene(t);
     if(Sv&&Sv.name==='tv'&&depth<FBDEPTH){const T=Math.round(t*70);this.renderAt(window.demoTest?t+(21*Math.floor(T/21)-T+7)/70-0.1:t-0.1,depth+1,true);{const L=new Uint32Array(W*VH);L.set(this.R.fb.subarray(VY*W+64,(VY+VH)*W));this.fbTex=new Tex(W,VH,L);}}   // the mapper reads the other buffer 64 pixels further (texture base = buffer + 0x100 bytes, checked texel by texel in the emulator)
     const t0=t;
-    const S0=window.demoTest&&!raw&&this.currentScene(t);const base=S0&&(FLIPS.get(S0.name)??(S0.name==='swirl'&&t<132.9?7:undefined));if(base!==undefined){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+base)/70;}
+    const S0=window.demoTest&&!raw&&this.currentScene(t);const base=S0&&(FLIPS.get(S0.name)??(S0.name==='swirl'&&t<132.9?7:undefined));if(typeof base==='number'){const T=Math.round(t*70);t+=(21*Math.floor(T/21)-T+base)/70;}
     this.call=window.demoTest?3*Math.floor(Math.round(t0*10)/3):Math.round(t0*10);   // call of the original whose output is shown (test mode: the 21-tick buffer ring)
     this.t=t;this.blurT=undefined;const R=this.R;R.clear(0);R.cam=null;R.fogT=null;
     const S=this.currentScene(t);
