@@ -131,7 +131,7 @@ export class Demo{
       if(s.fin){const k=(t-s.fin[0]-FD)/(Math.max(s.fin[1],1)/70);a*=Math.min(1,Math.max(0,k));}
       if(s.fout){const k=(t-s.fout[0]-FD)/(Math.max(s.fout[1],1)/70);a*=1-Math.min(1,Math.max(0,k));}
       a*=sa;if(a<=0)continue;
-      const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&!(tex.w>=320&&tex.h>=200);   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
+      const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&(nx.flags===4||!(tex.w>=320&&tex.h>=200));   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
       if(w>=320&&h>=200){x0=0;y0=VY;}

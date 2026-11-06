@@ -253,6 +253,39 @@ function force(d,R,t){
       const o=(j*8+y)*320+i*8+x,sel=_fmask[m+y*8+x],P=sel?P2:P1,k=(sel?d.fB:d.fA)[o]*3;
       fb[(VY+j*8+y)*W+i*8+x]=0xff000000|(P[k+2]<<16)|(P[k+1]<<8)|P[k];}}
 }
+// ---- 140.0-143.8 s: morph2.3ds object over a 4-attractor warped grid (callback 0x25ac8, grid 0x25738, textures blob.png 8-bit + its palette). x87 is single-precision/chop like the halftone scene (c()).
+// per attractor k (0x106644, stride 0x1c): centre (cx,cy) = cosines of the scene tick, strength; vertex (i*8,j*8): (u,v) = 524288*(i,j) + sum dx*str/(r2+500) (float32 accumulators, fistp truncates), shade 3145727.5 * prod((r2+500)/15000 < 1), clamped >= 2048, row = shade>>16
+function morphGrid(T){
+  const P=Math.PI,K=16777216,cos=Math.cos,tk=T,
+    cc=(ph,fr,A,B)=>c(c(cos(c(c(tk+ph)*c(fr*P)))*A)+B),
+    cd=(ph,fr,A,B)=>c(c(cos(c(c(c(tk+ph)-0.2)*c(fr*P)))*A)+B);
+  const f1=Math.fround(0.0212),f2=Math.fround(0.0301),f3=Math.fround(0.0492),f4=Math.fround(0.0334);
+  const sA=(m,B)=>c(c(c(cos(c(c(tk+0.82)*0.043))*130)*K)+B),sB=(m,B)=>c(c(c(cos(c(tk*0.06))*m)*K)+B);
+  const A=[[cc(1300,f1,35,100),cc(1030,f2,30,100),sA(0,-150)],[cd(1300,f1,35,140),cd(1030,f2,30,100),sB(100,-120)],
+           [cc(120,f3,35,180),cc(710,f4,30,100),sA(0,-140)],[cd(120,f3,35,220),cd(710,f4,30,100),sB(105,-120)]];
+  const NX=41,NY=26,g=new Int32Array(NX*NY*2),sh=new Int32Array(NX*NY);
+  for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){
+    let U=0,V=0,s=3145727.5;
+    for(const [cx,cy,st] of A){const dx=c(i*8-cx),dy=c(j*8-cy),r2=c(c(c(dx*dx)+c(dy*dy))+500),inv=c(1/r2);
+      U=c(c(c(c(dx*st)*inv)+U));V=c(c(c(c(dy*st)*inv)+V));
+      const f=c(r2*(1/15000));if(f<1)s=c(s*f);}
+    const k=j*NX+i;g[k*2]=Math.trunc(c(i*524288+U))*256|0;g[k*2+1]=Math.trunc(c(j*524288+V))*256|0;sh[k]=(s<2048?2048:Math.trunc(s))*256|0;}
+  return {g,sh};
+}
+function morphBG(d,R,T){
+  const tx=d.tex['blobidx'],tc=d.tex['blob'];if(!tx||!tc)return;
+  const P=d.mbp||(d.mbp=palOf(tx,tc)),G=morphGrid(T),g=G.g,sh=G.sh,NX=41,idx=tx.d,fb=R.fb;
+  for(let j=0;j<25;j++)for(let i=0;i<40;i++){
+    const a=(j*NX+i)*2,b=a+2,cc=a+NX*2,e=cc+2,s0=j*NX+i;
+    const dLu=I32(g[cc]-g[a])>>3,dLv=I32(g[cc+1]-g[a+1])>>3,dRu=I32(g[e]-g[b])>>3,dRv=I32(g[e+1]-g[b+1])>>3,dLs=I32(sh[s0+NX]-sh[s0])>>3,dRs=I32(sh[s0+NX+1]-sh[s0+1])>>3;
+    let Lu=g[a],Lv=g[a+1],Ru=g[b],Rv=g[b+1],Ls=sh[s0],Rs=sh[s0+1];
+    for(let k=0;k<8;k++){
+      Lu=I32(Lu+dLu);Lv=I32(Lv+dLv);Ru=I32(Ru+dRu);Rv=I32(Rv+dRv);Ls=I32(Ls+dLs);Rs=I32(Rs+dRs);
+      const su=I32(Ru-Lu)>>19,sv=I32(Rv-Lv)>>19,ss=I32(Rs-Ls)>>19;let cu=Lu>>>16,cv=Lv>>>16,cs=Ls>>>16,o=(VY+j*8+k)*W+i*8;
+      for(let x=0;x<8;x++,o++){const ti=idx[(((cv>>8)&255)<<8)|((cu>>8)&255)]&255,row=(cs>>8)&255;
+        fb[o]=0xff000000|((((P[ti*3+2]*row)>>7)&255)<<16)|((((P[ti*3+1]*row)>>7)&255)<<8)|(((P[ti*3]*row)>>7)&255);cu+=su;cv+=sv;cs+=ss;}
+    }}
+}
 // ---- iso-surface scene #2 (172-185.8 s): callbacks 0x23814 (init), 0x239bc (render), 0x23ac0 (sampler); textures metamap0 / metaenv0 / bump.png
 // 10 balls rise/fall along y by a per-frame speed and re-enter at +-1000 with a new random (x,z) (rand() = Watcom LCG, srand(time()) in the original -> the sequence below is just one valid one).
 const ISB_SPEED=[40,-20,-40,134,40,-35,50,57,-90,68];
@@ -335,10 +368,10 @@ export const SCENES=[
  {name:'metaballs',t0:100.7,t1:114.9,tex:['envi2','isomap','metanain'],
   render(d,R,lt,t){metaballs(d,R,t,lt-0.1);}},
  {name:'photos',t0:114.9,t1:128.6,tex:['holemap0','holemap1'],render(d,R,lt,t){holeScene(d,R,t);}},
- {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0','fil','doom','envplane'],
+ {name:'swirl',t0:128.6,t1:143.8,tex:['holemap0','holemap1','mulju00a','mulju00b','mulju00aidx','mulju00bidx','mefisidx','forcemaoidx','mefis','forcemap','forcemao','metamap0','fil','doom','envplane','blob','blobidx','mormap','morenv','morbump'],
   // four sub-scenes (the original's scene tick restarts at 128.6, 132.9, 136.9 and 140.0 s); textures chosen by colour (the original recolours them with palettes; sub-scene 2's hue is approximate)
   render(d,R,lt,t){if(t<132.9){swirl1(d,R,t);return;}if(t>=132.9&&t<136.9){swirl2(d,R,t-132.9-0.1);return;}if(t>=136.9&&t<139.8){force(d,R,t-136.9-0.1);return;}const SUB=[[128.6,'mulju00a'],[132.9,'mulju00a'],[136.9,'forcemao'],[140.0,'holemap1']];let k=0;while(k<3&&t>=SUB[k+1][0])k++;
-    tunnel(d,R,d.tex[SUB[k][1]],Math.max(0,(t-SUB[k][0])*TICK-7));}},
+    const T=Math.round((t-140.0)*70);morphBG(d,R,T);const {S}=S3(d,'morph2');S.pose(T);const cam=S.camera('Camera01',T);if(cam){cam.focal=cam.pfocal;drawScene(R,S,cam,d.mats('morph2'),{frame:T,t,cull:false,unlit:true});}}},
  {name:'balls',t0:143.8,t1:157.8,under:true,tex:['raita','ball','ballmid','mefisidx','forcemaoidx','mefis','forcemao'],
   render(d,R,lt,t){if(t>=147.55&&t<150.25){force(d,R,t-147.3-0.1);return;}   // 147.3-150.2 s: the callback 0x25d80 (the halftone swirl of 136.9-139.8) takes over, its tick restarting at 147.3 s
    blit(R,d.tex['raita'],0,t,1,0,0);if(t<147.55)d.drawSprites(t,BSA);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.2)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
