@@ -340,7 +340,7 @@ function isoScene2(d,R,lt,t){
     proj(P,nn){const q=[P[0],P[1],P[2]+1000],z=dt(q,Fv);if(z<1)return null;const l=Math.hypot(nn[0],nn[1],nn[2])||1,nv=[dt(nn,rt)/l,dt(nn,up)/l];
       return [W/2-0.5+fz*dt(q,rt)/z,VY+VH/2-0.5-fz*dt(q,up)/z,1/z,nv[0],nv[1]];},
     uv:P=>[4*(1+Math.atan2(P[2],P[0])/Math.PI),4+0.005*P[1]]});
-  isoParticles(d,R,n0-2,{Fv,rt,up,fz});       // flag [obj+0x184]&1: v = 4 + 4*y/800 (0x37a1e)
+  isoParticles(d,R,(window.demoTest?n:n0-2),{Fv,rt,up,fz});       // flag [obj+0x184]&1: v = 4 + 4*y/800 (0x37a1e)
 }
 const S3=(d,n)=>d.sc3[n];
 export const SCENES=[

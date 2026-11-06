@@ -16,6 +16,7 @@ await send('Page.enable');await send('Runtime.enable');
 ws.addEventListener('message',m=>{const d=JSON.parse(m.data);if(d.method==='Runtime.consoleAPICalled')console.log('[page]',d.params.args.map(a=>a.value).join(' '));if(d.method==='Runtime.exceptionThrown')console.log('[exception]',JSON.stringify(d.params.exceptionDetails).slice(0,600));});
 await send('Page.navigate',{url:`http://localhost:${port}/index.html?test=1`});
 for(let i=0;i<300;i++){const r=await send('Runtime.evaluate',{expression:'window.demoReady===true',returnByValue:true});if(r.result.result.value)break;await new Promise(r=>setTimeout(r,200));}
+if(process.env.PRE)await send('Runtime.evaluate',{expression:process.env.PRE});
 for(const t of ts){
   const r=await send('Runtime.evaluate',{expression:`(()=>{window.demo.renderAt(${t});return window.demo.dataURL();})()`,returnByValue:true});
   if(r.result.exceptionDetails){console.log('ERR',JSON.stringify(r.result.exceptionDetails).slice(0,500));continue;}

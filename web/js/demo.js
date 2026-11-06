@@ -59,7 +59,10 @@ export class Demo{
   flashAt(t){ // flash_color events: colour, duration in ticks (70 Hz)
     let best=null;for(const e of this.script.events){if(e.t+0.26>t)break;if(e.type===3&&e.fn===0x222c4&&(e.a===7||e.a===6))best=e;}
     if(!best)return null;let t0=best.t;const sc=this.currentScene(t);if(sc&&sc.t0>=t0&&sc.t0-t0<0.2)t0=sc.t0;else t0+=0.26;   // the original starts the fade at the first frame after the event (the scene's reset tick)
-    const dur=best.c/70;if(best.a===6)return {col:best.b,a:Math.min(1,Math.max(0,(t-t0)/Math.max(dur,0.05)))};   // 6 = fade TO the colour (and it stays), 7 = flash from it
+    const dur=best.c/70;
+    if(window.demoTest&&sc&&sc.name==='flesh'&&best.a===6){   // fader 0x22a7f: timer += 7 per call from the call two after the event's, alpha = trunc(255*timer/dur), blend (src*(255-a)>>8)+(col*a>>8) (table 0x15a218); the grab shows the 21-tick ring call
+      const T=Math.round(t*70),tr=21*Math.floor(T/21),st=12040+7*(Math.ceil((best.t*70-12040)/7)+1),q=Math.min(255,Math.max(0,Math.trunc(255*Math.fround((tr-st)/best.c))));return {col:best.b,a:q/255,q};}
+    if(best.a===6)return {col:best.b,a:Math.min(1,Math.max(0,(t-t0)/Math.max(dur,0.05)))};   // 6 = fade TO the colour (and it stays), 7 = flash from it
     const a=1-(t-t0)/Math.max(dur,0.05);return a>0?{col:best.b,a}:null;
   }
   // beat zoom: on each blur burst (blur.json, 9 calls of 7 ticks) the engine's camera FOV is cut by KICK[i] degrees at call i after the burst's first, decaying quadratically (measured from the engine matrix 0x149914 in the emulator,
@@ -87,7 +90,7 @@ export class Demo{
     if(!(S&&S.under&&t<147.55))this.drawSprites(t);
     this.applyBlur(t);
     const f=this.flashAt(t);if(f){const c=f.col,fr=(c>>16)&255,fg=(c>>8)&255,fb=c&255;// colour order in the script is 0xRRGGBB
-      const fbp=R.fb;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
+      const fbp=R.fb;if(f.q!==undefined){const q=f.q,iq=255-q;for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];fbp[o]=0xff000000|((((p>>16)&255)*iq>>8)+(fb*q>>8))<<16|((((p>>8)&255)*iq>>8)+(fg*q>>8))<<8|(((p&255)*iq>>8)+(fr*q>>8));}}else for(let y=VY;y<VY+VH;y++)for(let x=0;x<W;x++){const o=y*W+x,p=fbp[o];const a=f.a;fbp[o]=0xff000000|((((p>>16)&255)*(1-a)+fb*a)<<16)|((((p>>8)&255)*(1-a)+fg*a)<<8)|(((p&255)*(1-a)+fr*a)|0);}}
     this.u32.set(R.fb);this.ctx.putImageData(this.img,0,0);
   }
   fadeOf(id,t){FD=t>157.8?FDTV:0.19;const o=this.spritesAt(t).find(x=>x.id===id);if(!o)return 0;let a=o.nx.alpha;const s=o.s;
