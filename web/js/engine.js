@@ -51,7 +51,7 @@ export class Raster{
       let eu=g0[6]+g[18]*dx0+g[19]*dy,ev=g0[7]+g[21]*dx0+g[22]*dy;
       const diz=g[0],duw=g[3],dvw=g[6],dr=g[9],dg=g[12],db=g[15],deu=g[18],dev=g[21];
       let o=y*W+x0;
-      const fxOn=(mode&1)&&tex;let fj=16,U0=0,V0=0,fdu=0,fdv=0;
+      const fxOn=(mode&1)&&tex,fxw=!m.fx,p2=(tw&twm)===0&&(th&thm)===0;let fj=16,U0=0,V0=0,fdu=0,fdv=0;
       for(let x=x0;x<=x1;x++,o++,fj++,iz+=diz,uw+=duw,vw+=dvw,r+=dr,gg+=dg,bb+=db,eu+=deu,ev+=dev){
         if(fxOn&&fj===16){   // the original's 16-pixel spans (0x60e00 variant, 0x5bd07): u,v exact (perspective) every 16th pixel, truncated to 16.16, stepped linearly in fixed point in between
           fj=0;const w0=1/iz,w1=1/(iz+16*diz);
@@ -60,7 +60,7 @@ export class Raster{
         let R,G,B;
         let ftx=-1,fty=0;
         if(mode&1){let px;
-          if(fxOn){let tx=Math.floor((U0*16+fj*fdu)/1048576),ty=Math.floor((V0*16+fj*fdv)/1048576);if(!m.fx){tx=((tx%tw)+tw)%tw;ty=((ty%th)+th)%th;}ftx=tx;fty=ty;px=td[ty*tw+tx];if(px===undefined)continue;}
+          if(fxOn){let tx=Math.floor((U0*16+fj*fdu)*9.5367431640625e-7),ty=Math.floor((V0*16+fj*fdv)*9.5367431640625e-7);if(fxw){if(p2){tx&=twm;ty&=thm;}else{tx=((tx%tw)+tw)%tw;ty=((ty%th)+th)%th;}}ftx=tx;fty=ty;px=td[ty*tw+tx];if(px===undefined)continue;}
           else{const w=1/iz;let u=uw*w,v=vw*w;u-=Math.floor(u);v-=Math.floor(v);px=td[((v*th)|0)*tw+((u*tw)|0)];}R=(px&255)*fr;G=((px>>8)&255)*fg;B=((px>>16)&255)*fbl;}
         else if(mode&2){R=G=B=0;}else{R=255*fr;G=255*fg;B=255*fbl;}
         // the original's shade LUT (0x149a18) is [row*256+colour] = floor(colour*row/64), row = integer part of the interpolated light (0..62): 63 light levels per channel
