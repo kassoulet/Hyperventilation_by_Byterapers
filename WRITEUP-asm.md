@@ -523,3 +523,16 @@ The engine's beat FOV cut (section 35: 10.137 degrees at the first call of each 
 ## 47. The loader's static arrays carry over from file to file
 
 The uv-by-vertex-index array (`SU/SV`, 0x1af8e0/0x1bf8e0) and the material-by-face array (`SM`) of the 3DS loader are never cleared and are shared by all files; the port had one pair per `parse3DS` call and parsed the files concurrently. `parse3DS` now uses module-level arrays and `Demo.load` parses the files in the original's load order (morph, 0room3, space2, piikit2, hallu, morph, morph2, meta1, dmoykk2, tvfin, ball2; the second `morph` parse only advances the state). Check: the original's vertex records of the hallu blades (hooked at the polygon setup 0x530a2, 82.5 s) carry u,v = (0.838,-0.038), (0.838,-0.041), (0.82,-0.045), (0.755,-0.05), (0.655,-0.056), (0.61,-0.062), (0.604,-0.067) ... by vertex index 2, 3, 4, ... identical for every blade, and the port now produces exactly these (they are the last coordinates loaded before hallu, `soiro01` of piikit2, v mirrored). The image is unchanged (mean 1.88): the blade material has the FACEMAP flag, whose corner coordinates (0x32e80) replace the vertex coordinates, so the remaining 82.5 s error is not the stale array (this also corrects section 38's note: the stale values were right, the hallu faces are facemap faces).
+
+## 48. Flesh mapper (0x5f5b6): what is exact, what is not
+
+Hooking the tex+env+bump mapper at 172.5 s (87608 hook hits, 43804 pixels) and comparing per pixel with the port:
+
+* The bump table patched into the mapper (`mov dx, [ebx*2 + table]`) is exactly `(h[x-1]-h[x+1]) & 255` / `(h[y-1]-h[y+1]) & 255` of `bumpidx.png` (checked on all 65536 entries: 100%), indexed by the same 256x256 texel index as the main texture (`(u>>16 & 0xff) | (v>>16 & 0xff)<<8`); the env index is `(env_u_int + dl) & 255 | (env_v_int + dh)<<8` with byte wrap-around. The port now takes the bump texel from the main texture's fixed-point texel instead of a second float evaluation.
+* The pre-bump env coordinate (`[0x21bca2]`, 16.16 integer byte) agrees with the port's `0.5 + n/2` coordinate on 57% of the pixels exactly and to one texel on the rest (rounding of the per-pixel stepping).
+* The main texel does not: the port's u runs 1 to 3 texels ahead of the original's (median +1.8, v median -0.5), with the same spread in the final env index. The vertex `u = 4 + 4*atan2(z,x)/pi` (0x37a00: constants 4.0 and 1/pi, plain `fpatan` while `[0x10bbd4]` is 0) is the same formula as the port's, so the difference is in the grid positions (the isosurface vertices) rather than in the mapper: next thing to check is the field sampler (0x3697c) against the emulator's vertex records (`+4,+8,+0xc` of the generated vertices at 172.5 s are in the trace `tri.py`).
+* The mapper's colour = `((tex & 0xfefefe) + (env & 0xfefefe)) >> 1` on palette colours; the port's float average is within 1/255.
+
+172.5 s 4.82 -> 4.96 (the more exact bump texel exposes the u offset), 142.5 s 1.65 -> 1.59, mean unchanged at 1.88.
+
+Probe (not adopted): shifting the flesh main-texture u by a constant helps each frame by a different amount (172.5 s: 4.96 -> 4.19 at 1 texel, 4.52 at 2; 177.5 s: 5.67 -> 5.44 / 5.24 / 5.16 at 1 / 2 / 3), so the offset is a per-frame phase (the grab's call, the ball field's rotation), not a mapper constant.

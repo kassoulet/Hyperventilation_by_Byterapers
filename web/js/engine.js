@@ -58,8 +58,9 @@ export class Raster{
           U0=Math.trunc(uw*w0*tw*65536);V0=Math.trunc(vw*w0*th*65536);fdu=Math.trunc((uw+16*duw)*w1*tw*65536)-U0;fdv=Math.trunc((vw+16*dvw)*w1*th*65536)-V0;}
         if(!add&&iz<=zb[o])continue;
         let R,G,B;
+        let ftx=-1,fty=0;
         if(mode&1){let px;
-          if(fxOn){let tx=Math.floor((U0*16+fj*fdu)/1048576),ty=Math.floor((V0*16+fj*fdv)/1048576);if(!m.fx){tx=((tx%tw)+tw)%tw;ty=((ty%th)+th)%th;}px=td[ty*tw+tx];if(px===undefined)continue;}
+          if(fxOn){let tx=Math.floor((U0*16+fj*fdu)/1048576),ty=Math.floor((V0*16+fj*fdv)/1048576);if(!m.fx){tx=((tx%tw)+tw)%tw;ty=((ty%th)+th)%th;}ftx=tx;fty=ty;px=td[ty*tw+tx];if(px===undefined)continue;}
           else{const w=1/iz;let u=uw*w,v=vw*w;u-=Math.floor(u);v-=Math.floor(v);px=td[((v*th)|0)*tw+((u*tw)|0)];}R=(px&255)*fr;G=((px>>8)&255)*fg;B=((px>>16)&255)*fbl;}
         else if(mode&2){R=G=B=0;}else{R=255*fr;G=255*fg;B=255*fbl;}
         // the original's shade LUT (0x149a18) is [row*256+colour] = floor(colour*row/64), row = integer part of the interpolated light (0..62): 63 light levels per channel
@@ -68,7 +69,7 @@ export class Raster{
         if(mode&6){
           let u=eu,v=ev;
           if(mode&4){const w=1/iz;let s=uw*w,t2=vw*w;s-=Math.floor(s);t2-=Math.floor(t2);
-            const bx=(s*bw)|0,by=(t2*bh)|0;const hl=bd[by*bw+((bx-1)&bwm)]&255,hr=bd[by*bw+((bx+1)&bwm)]&255,hu=bd[((by-1)&bhm)*bw+bx]&255,hd=bd[((by+1)&bhm)*bw+bx]&255;
+            const bx=ftx>=0?ftx%bw:(s*bw)|0,by=ftx>=0?fty%bh:(t2*bh)|0;const hl=bd[by*bw+((bx-1)&bwm)]&255,hr=bd[by*bw+((bx+1)&bwm)]&255,hu=bd[((by-1)&bhm)*bw+bx]&255,hd=bd[((by+1)&bhm)*bw+bx]&255;
             u+=Math.max(-128,Math.min(127,hl-hr))/ew;v+=Math.max(-128,Math.min(127,hu-hd))/eh;}
           const ex=((u<0?0:u>0.999?0.999:u)*ew)|0,ey=((v<0?0:v>0.999?0.999:v)*eh)|0;const px=ed[ey*ew+ex];
           if(mode&1){R=(R+(px&255)*envk*r)*0.5;G=(G+((px>>8)&255)*envk*gg)*0.5;B=(B+((px>>16)&255)*envk*bb)*0.5;}else{R+=(px&255)*envk*r;G+=((px>>8)&255)*envk*gg;B+=((px>>16)&255)*envk*bb;}}   // tex+env mappers (0x5ec1c, 0x5f5b6) average the two colours
