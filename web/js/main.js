@@ -13,6 +13,7 @@ function draw(t){if(t===lastDraw)return;lastDraw=t;d.renderAt(t);ctx.drawImage(d
 async function initAudio(){
   const {ChiptuneJsPlayer}=await import('../vendor/chiptune3.js');
   ac=new AudioContext();cp=new ChiptuneJsPlayer({context:ac,repeatCount:0,interpolationFilter:8});
+  cp.gain.connect(ac.destination);   // chiptune3 only routes to the speakers itself when it creates its own context
   await new Promise(r=>cp.onInitialized(r));
   const buf=await (await fetch('assets/music/hypermmx.xm')).arrayBuffer();
   cp.onProgress(m=>{if(playing&&Math.abs(m.pos-cur())>0.25){tBase=m.pos;wall0=now();}});   // keep visuals locked to the module clock
