@@ -6,7 +6,8 @@ cd web && python3 -m http.server 8000      # open http://localhost:8000/  (click
 ```
 Player: canvas 320x240 shown at **4:3** (the original's VESA 320x240 mode has square pixels; the picture is a 320x200 viewport with 20-pixel bars, like the original),
 music through libopenmpt (chiptune3, `web/vendor`), play/pause, a seek bar that works anywhere (the whole demo is a pure function of the music time, so seeking just sets the
-module position with `setPos` and re-renders), fullscreen, keys: Space, Left/Right (5 s, Shift 10 s), Up/Down (previous/next scene), Home/End, F, M.
+module position with `setPos` and re-renders), fullscreen, keys: Space, Left/Right (5 s, Shift 10 s), Up/Down (previous/next scene), Home/End, F, M, C.
+Display option **CRT** (checkbox / key `C`, remembered, off by default): a CSS scanline overlay (one soft dark band per canvas row, faint vignette). The stage height is snapped to a whole number k of device pixels per source row so the bands are regular (no moire); unavailable when k<2 (small window). Display only, pixel data untouched.
 Tests: `node tools/shot.mjs OUTDIR t1 t2 ...` (frames of the port in headless Chrome), `node tools/perf.mjs` (3-11 ms/frame), `node tools/uitest.mjs` (play/pause/seek smoke test).
 
 ## What is here

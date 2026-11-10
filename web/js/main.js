@@ -20,6 +20,27 @@ async function initAudio(){
   cp.onEnded(()=>{playing=false;tBase=dur;sync();});
   cp.play(buf);audioReady=true;
 }
+// CRT option: scanline overlay, one band per canvas row (240), period = k whole device px (no moire); off by default, display only.
+const SRC=240,crt=$('crt'),cc=$('crtc'),stage=$('stage');let crtOn=false;
+try{crtOn=localStorage.getItem('crt')==='1';}catch(e){}
+function layout(){
+  const dpr=devicePixelRatio,fs=!!document.fullscreenElement,W=innerWidth,H=innerHeight;
+  const availH=(fs?Math.min(H,W*3/4):Math.min(H-170,W*.96*3/4))*dpr,k=Math.floor(availH/SRC);
+  const ok=k>=2;cc.disabled=!ok;cc.parentNode.title=ok?'Scanlines (C)':'Window too small for CRT scanlines';
+  const on=crtOn&&ok;stage.classList.toggle('crt',on);
+  for(const e of [cvs,stage])e.style.width=e.style.height='';
+  if(!on){crt.style.display='none';return;}
+  const h=k*SRC/dpr,w=h*4/3;
+  if(fs){cvs.style.width=w+'px';cvs.style.height=h+'px';}else{stage.style.width=w+'px';stage.style.height=h+'px';}
+  const p=k/dpr+'px';
+  Object.assign(crt.style,{display:'block',left:cvs.offsetLeft+'px',top:cvs.offsetTop+'px',width:w+'px',height:h+'px',
+    background:`radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.12)),linear-gradient(transparent 40%,rgba(0,0,0,.33)) 0 0/100% ${p}`});
+}
+function setCrt(v){crtOn=v;cc.checked=v;try{localStorage.setItem('crt',v?'1':'0');}catch(e){}layout();}
+cc.checked=crtOn;cc.onchange=()=>setCrt(cc.checked);
+addEventListener('resize',layout);document.addEventListener('fullscreenchange',layout);
+matchMedia('(resolution:'+devicePixelRatio+'dppx)').addEventListener('change',layout,{once:true});
+layout();
 function sync(){$('pp').textContent=playing?'Pause':'Play';}
 async function play(){
   if(!started){started=true;$('go').remove();await initAudio().catch(e=>console.error(e));tBase=0;}
@@ -39,6 +60,7 @@ addEventListener('keydown',e=>{const k=e.key;const big=e.shiftKey?10:5;
   if(k===' '){e.preventDefault();toggle();}else if(k==='ArrowLeft'){seek(cur()-big);}else if(k==='ArrowRight'){seek(cur()+big);}
   else if(k==='ArrowUp'||k==='ArrowDown'){const t=cur();const i=SCENES.findIndex(s=>t>=s.t0&&t<s.t1);const j=Math.max(0,Math.min(SCENES.length-1,i+(k==='ArrowUp'?-1:1)));seek(SCENES[j].t0+0.01);}
   else if(k==='Home')seek(0);else if(k==='End')seek(dur-1);else if(k==='f'||k==='F')$('fs').click();
+  else if((k==='c'||k==='C')&&!cc.disabled)setCrt(!crtOn);
   else if(k==='m'||k==='M'){muted=!muted;cp&&cp.setVol(muted?0:1);}});
 function loop(){const t=cur();if(!drag)sk.value=Math.round(t*10);$('tm').textContent=fmt(t)+' / '+fmt(dur);if(playing)draw(t);requestAnimationFrame(loop);}
 await d.load(p=>{$('go').textContent='Loading '+Math.round(p*100)+'%';});
