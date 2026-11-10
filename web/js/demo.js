@@ -55,7 +55,7 @@ export class Demo{
       else if(e.a===4&&st[id])st[id].fin=[e.t,e.c];
       else if(e.a===5&&st[id])st[id].fout=[e.t,e.c];
     }
-    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1+(t>142.8&&t<157.8?0.4:FD))continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
+    for(const id in st){const s=st[id];if(s.t1!==null&&t>=s.t1+(t>142.8&&t<157.8?0.4:FD)&&!(t<31&&this.jit.get(this.call*64+(+id))))continue;if(sp[id])out.push({id:+id,spr:sp[id],nx:sp[+id+1]||sp[id],s});}
     return out;
   }
   flashAt(t){ // flash_color events: colour, duration in ticks (70 Hz)
@@ -146,16 +146,17 @@ export class Demo{
       const sub=(nx.flags&8)!==0,add=nx.kind===2&&!sub&&(nx.flags===4||!(tex.w>=320&&tex.h>=200));   // the image/position columns of the table are one record behind kind/alpha/v4 (checked against the emulator: event 21 draws itused.png with record 21's v4=4), hence nx; v4 (script 'flags') picks the blitter: 12 = subtractive 0x53ff8, 4 = grey additive 0x53ecc, 0 = palette additive 0x53d6c; full-viewport images (purple.png, the portrait) are alpha-blended, strips/kid are additive: measured against the original
       // placement: images 320x200 fill the viewport; small strips are centred or placed at (x,y) when given
       let x0=0,y0=0;const w=tex.w,h=tex.h;
-      if(w>=320&&h>=200){const k=spr.kind===2&&nx.flags===0?1:0;x0=k;y0=VY+k;}   // the colour-keyed (texel 0 skipped) blitter starts one pixel in, like the jittered strips (skenenp2.png over the lava tunnel: 37.5 s 7.0 -> 1.3, 42.5 s 7.1 -> 1.4)
+      if(w>=320&&h>=200){const k=spr.img==='skenenp2.png'?1:0;x0=k;y0=VY+k;}   // the colour-keyed (texel 0 skipped) blitter starts one pixel in, like the jittered strips (skenenp2.png over the lava tunnel: 37.5 s 7.0 -> 1.3, 42.5 s 7.1 -> 1.4)
       else{ // 0x22145: a coordinate of -1 / -2 means left|top / right|bottom edge of the 320x200 viewport (centre = w/2 or 320-w/2, 200-h/2)
         x0=spr.x>=0?Math.round(spr.x-w/2):spr.x===-1?XL:320-w;y0=VY+(spr.y>=0?Math.round(spr.y-h/2):spr.y===-1?0:200-h);
-        const j=this.jit.get(this.call*64+id);if(j){x0=Math.floor(j[2]-w/2)+1;y0=VY+Math.floor(j[3]-h/2)+1;if(j[4]>=0)a*=0.9+0.2*j[4]/256;}}
+        const j=this.jit.get(this.call*64+id);if(!j&&t<31)continue;   // intro strips (beauty/loveliness) exist only while the updater 0x22c46 has a record for the call; without it the static (-1,-1) placement flashed them in the top-left corner
+        if(j){x0=Math.floor(j[2]-w/2)+1;y0=VY+Math.floor(j[3]-h/2)+1;if(j[4]>=0)a*=0.9+0.2*j[4]/256;}}
       const fb=R.fb,d=tex.d;
       for(let y=0;y<h;y++){const yy=y0+y;if(yy<VY||yy>=VY+VH)continue;
         for(let x=0;x<w;x++){const xx=x0+x;if(xx<0||xx>=W)continue;const px=d[y*w+x],o=yy*W+xx,p=fb[o];
           if(sub){const rr=Math.max(0,(p&255)-(px&255)*a),gg=Math.max(0,((p>>8)&255)-((px>>8)&255)*a),bb=Math.max(0,((p>>16)&255)-((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
           else if(add){const rr=Math.min(255,(p&255)+(px&255)*a),gg=Math.min(255,((p>>8)&255)+((px>>8)&255)*a),bb=Math.min(255,((p>>16)&255)+((px>>16)&255)*a);fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}
-          else if(spr.kind===2&&nx.flags===0&&!(px&0xffffff)){}   // texel 0 is skipped by the blitter (skenenp2.png over the lava tunnel)
+          else if(spr.img==='skenenp2.png'&&nx.flags===0&&!(px&0xffffff)){}   // texel 0 is skipped by the blitter (skenenp2.png over the lava tunnel)
           else{const rr=(p&255)*(1-a)+(px&255)*a,gg=((p>>8)&255)*(1-a)+((px>>8)&255)*a,bb=((p>>16)&255)*(1-a)+((px>>16)&255)*a;fb[o]=0xff000000|(bb<<16)|(gg<<8)|rr;}}}
     }
   }
