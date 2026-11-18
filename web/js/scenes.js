@@ -289,6 +289,34 @@ function morphBG(d,R,T){
         fb[o]=0xff000000|((((P[ti*3+2]*row)>>7)&255)<<16)|((((P[ti*3+1]*row)>>7)&255)<<8)|(((P[ti*3]*row)>>7)&255);cu+=su;cv+=sv;cs+=ss;}
     }}
 }
+// ---- lava tunnel (30.1-44.3 s), exact: callback 0x23528 = grid 0x23350 (3 attractors, x87 single/chop like morphGrid) -> 8-bit cell filler 0x34db4 on forcemap's indices -> 0x34d0c/0x34fb2: pal*row>>6 through the
+// 64-row LUT, row = the shade interpolated per 8x8 cell (swirl pipeline). Verified 0 differing bytes against the emulator (re/tun_oracle.py) on the 320x200 viewport.
+const LAVA=[[0.0081,0.007,500,230,671088640],[0.0123,0.0084,320,600,-335544320],[0.0092,0.0064,120,730,167772160]].map(a=>[Math.fround(a[0]),Math.fround(a[1]),a[2],a[3],a[4]]);
+function lavaGrid(T){
+  const P=Math.PI,cos=Math.cos,A=LAVA.map(([fx,fy,px,py,st])=>[c(c(cos(c(c(T+px)*c(fx*P)))*150)+160),c(c(cos(c(c(T+py)*c(fy*P)))*90)+100),st]);
+  const NX=41,NY=26,g=new Int32Array(NX*NY*2),sh=new Int32Array(NX*NY);
+  for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){
+    let U=0,V=0,s=4194303;
+    for(const [cx,cy,st] of A){const dx=c(i*8-cx),dy=c(j*8-cy),r2=c(c(c(dx*dx)+c(dy*dy))+500),inv=c(1/r2);
+      U=c(c(c(dx*st)*inv)+U);V=c(c(c(dy*st)*inv)+V);
+      const f=c(c(r2+5000)*(1/15000));if(f<1)s=c(s*f);}
+    const k=j*NX+i;g[k*2]=Math.trunc(c(c(i*524288)+U))*256|0;g[k*2+1]=Math.trunc(c(c(j*524288)+V))*256|0;sh[k]=Math.trunc(s)*256|0;}
+  return {g,sh};
+}
+function lavaTunnel(d,R,T){
+  const tx=d.tex['forcemapidx'],tc=d.tex['forcemap'];if(!tx||!tc)return;
+  const P=d.lvp||(d.lvp=palOf(tx,tc)),{g,sh}=lavaGrid(T),NX=41,idx=tx.d,fb=R.fb;
+  for(let j=0;j<25;j++)for(let i=0;i<40;i++){
+    const a=(j*NX+i)*2,b=a+2,cc=a+NX*2,e=cc+2,s0=j*NX+i;
+    const dLu=I32(g[cc]-g[a])>>3,dLv=I32(g[cc+1]-g[a+1])>>3,dRu=I32(g[e]-g[b])>>3,dRv=I32(g[e+1]-g[b+1])>>3,dLs=I32(sh[s0+NX]-sh[s0])>>3,dRs=I32(sh[s0+NX+1]-sh[s0+1])>>3;
+    let Lu=g[a],Lv=g[a+1],Ru=g[b],Rv=g[b+1],Ls=sh[s0],Rs=sh[s0+1];
+    for(let k=0;k<8;k++){
+      Lu=I32(Lu+dLu);Lv=I32(Lv+dLv);Ru=I32(Ru+dRu);Rv=I32(Rv+dRv);Ls=I32(Ls+dLs);Rs=I32(Rs+dRs);
+      const su=I32(Ru-Lu)>>19,sv=I32(Rv-Lv)>>19,ss=I32(Rs-Ls)>>19;let cu=Lu>>>16,cv=Lv>>>16,cs=Ls>>>16,o=(VY+j*8+k)*W+i*8;
+      for(let x=0;x<8;x++,o++){const ti=idx[(((cv>>8)&255)<<8)|((cu>>8)&255)]&255,row=(cs>>8)&255;
+        fb[o]=0xff000000|((((P[ti*3+2]*row)>>6)&255)<<16)|((((P[ti*3+1]*row)>>6)&255)<<8)|(((P[ti*3]*row)>>6)&255);cu+=su;cv+=sv;cs+=ss;}
+    }}
+}
 // ---- iso-surface scene #2 (172-185.8 s): callbacks 0x23814 (init), 0x239bc (render), 0x23ac0 (sampler); textures metamap0 / metaenv0 / bump.png
 // 10 balls rise/fall along y by a per-frame speed and re-enter at +-1000 with a new random (x,z) (rand() = Watcom LCG, srand(time()) in the original -> the sequence below is just one valid one).
 const ISB_SPEED=[40,-20,-40,134,40,-35,50,57,-90,68];
@@ -348,8 +376,8 @@ export const SCENES=[
   render(d,R,lt,t){const {S,sc}=S3(d,'space2');const f=Math.max(0,t*TICK-7);S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;
     {const m=S.meshes.find(x=>x.node.name==='lock');if(m){const c0=[-150.7,0.1,5000];for(let k=0;k<m.nv;k++)for(let a=0;a<3;a++)m.wv[k*3+a]+=cam.pos[a]-c0[a];}}   // the cavern sphere follows the camera (measured: the visible wall is a sphere centred on the camera, not on the object's file position)
     drawScene(R,S,cam,d.mats('space2'),{frame:f,t,fogK:d.fogAt(t),cull:false,skip:n=>n==='fd'});}},
- {name:'lava tunnel',t0:30.1,t1:44.3,tex:['forcemao','forcemap'],
-  render(d,R,lt,t){tunnel(d,R,d.tex['forcemap'],Math.max(0,lt*TICK-7));}},
+ {name:'lava tunnel',t0:30.1,t1:44.3,tex:['forcemao','forcemap','forcemapidx'],
+  render(d,R,lt,t){lavaTunnel(d,R,Math.max(0,Math.round(lt*TICK)-7));}},
  {name:'room',t0:44.3,t1:51.1,tex:['seina','plate','lattia','0floor','0reuna','pylvas','seina2','rako','6','hissi'],
   render(d,R,lt,t){const {S}=S3(d,'0room3');const f=Math.trunc(1.2*Math.max(0,lt*TICK-7));S.pose(f);const cam=S.camera('Camera01',f);if(!cam)return;R.fogT=d.fogT;drawScene(R,S,cam,d.mats('0room3'),{frame:f,t,fogK:d.fogAt(t)});}},
  {name:'portrait',t0:51.1,t1:58.2,tex:['purple'],

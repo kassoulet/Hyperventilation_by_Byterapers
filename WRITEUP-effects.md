@@ -29,7 +29,7 @@ flashes, scene switches. Original scene-switch times (seconds):
 | time | event | scene (render callback) |
 |---|---|---|
 | 0.0 | start | **space** - `space2.3ds`, Orion nebula dome, arches, ABBA photos fading over (cb 0x20f68) |
-| 30.0 | red flash | **lava tunnel** (cb 0x23528, init 0x2329c; a distortion grid with three moving 1/r attractors, see WRITEUP-asm.md section 11) with the `skenenp2` kid sprite |
+| 30.0 | red flash | **lava tunnel** (cb 0x23528, init 0x2329c; a distortion grid with three moving 1/r attractors, see WRITEUP-asm.md sections 11 and 49; bit-exact) with the `skenenp2` kid sprite |
 | 44.1 | | **room** - `0room3.3ds` (cb 0x1f040) |
 | 51.2 | hyperven.png | title sprite over a portrait photo (purple.png) |
 | 58.0 | white flash | **blob** - `dmoykk2.3ds`, env-mapped 1473-vertex blob on `keltanai.png` (cb 0x24bac) |

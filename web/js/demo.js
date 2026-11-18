@@ -62,6 +62,7 @@ export class Demo{
     let best=null;for(const e of this.script.events){if(e.t+0.26>t)break;if(e.type===3&&e.fn===0x222c4){if(e.a===7||e.a===6)best=e;else if(e.a===8)best=null;}}   // command 8 stops the fader (the 200-tick fade-in from black at t=0 is cut at 1.76 s: the reference is at full brightness from 2.2 s)
     if(!best)return null;let t0=best.t;const sc=this.currentScene(t);if(sc&&sc.t0>=t0&&sc.t0-t0<0.2)t0=sc.t0;else t0+=0.26;   // the original starts the fade at the first frame after the event (the scene's reset tick)
     const dur=best.c/70;
+    if(window.demoTest&&sc&&best.a===7){const T=Math.round(t*70),tr=21*Math.floor(T/21),st=12040+7*(Math.ceil((best.t*70-12040)/7)+1),q=255-Math.min(255,Math.max(0,Math.trunc(255*Math.fround((tr-st)/best.c))));return q>0?{col:best.b,a:q/255,q}:null;}   // flash (command 7): same fader 0x22a7f, alpha runs 255 -> 0 (verified on the lava tunnel at 30.3-30.5 s: slope 0.695 = (255-77)/256)
     if(window.demoTest&&sc&&sc.name==='flesh'&&best.a===6){   // fader 0x22a7f: timer += 7 per call from the call two after the event's, alpha = trunc(255*timer/dur), blend (src*(255-a)>>8)+(col*a>>8) (table 0x15a218); the grab shows the 21-tick ring call
       const T=Math.round(t*70),tr=21*Math.floor(T/21),st=12040+7*(Math.ceil((best.t*70-12040)/7)+1),q=Math.min(255,Math.max(0,Math.trunc(255*Math.fround((tr-st)/best.c))));return {col:best.b,a:q/255,q};}
     if(best.a===6)return {col:best.b,a:Math.min(1,Math.max(0,(t-t0)/Math.max(dur,0.05)))};   // 6 = fade TO the colour (and it stays), 7 = flash from it

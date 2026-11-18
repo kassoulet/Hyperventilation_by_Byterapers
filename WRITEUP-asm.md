@@ -536,3 +536,9 @@ Hooking the tex+env+bump mapper at 172.5 s (87608 hook hits, 43804 pixels) and c
 172.5 s 4.82 -> 4.96 (the more exact bump texel exposes the u offset), 142.5 s 1.65 -> 1.59, mean unchanged at 1.88.
 
 Probe (not adopted): shifting the flesh main-texture u by a constant helps each frame by a different amount (172.5 s: 4.96 -> 4.19 at 1 texel, 4.52 at 2; 177.5 s: 5.67 -> 5.44 / 5.24 / 5.16 at 1 / 2 / 3), so the offset is a per-frame phase (the grab's call, the ball field's rotation), not a mapper constant.
+
+## 49. Lava tunnel, bit-exact (0x23528 / 0x23350)
+The float model of section 11 (with an empirical gamma 1.45 to mimic the darkness) is replaced by the original's integer pipeline. Grid 0x23350: three attractors, centres `cos((tick+ph)*f*pi)*{150,90}+{160,100}`, every x87 operation rounded to single with chop
+(`c()` in `scenes.js`); per vertex `u = i*524288 + sum(dx*s/(r2+500))`, shade starts at 4194303.0 and is multiplied by `(r2+500+5000)/15000` when below 1; both are stored `fistp`-truncated and `<<8`. The 8-bit cell filler 0x34db4 samples the 256x256 index texture
+(`forcemap`, palette indices kept in `forcemapidx.png`), then 0x34fb2 maps `LUT[row][texel]`, a table of `palette*row>>6` (row = shade interpolated bilinearly inside each 8x8 cell in int32). The "darker and more saturated" look was simply `row/64` applied to the palette entries instead of to a gamma-curved RGB.
+The oracle (`re/tun_oracle.py`) and the port agree on every byte; the shown frame is the render of tick 14+21n (flip ring, see the scene-tick section above). The red flash at 30.0 s is the fader 0x22a7f run backwards (alpha 255 -> 0).
