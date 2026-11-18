@@ -407,6 +407,7 @@ export const SCENES=[
   render(d,R,lt,t){if(t>=147.55&&t<150.25){force(d,R,t-147.3-0.1);return;}   // 147.3-150.2 s: the callback 0x25d80 (the halftone swirl of 136.9-139.8) takes over, its tick restarting at 147.3 s
    blit(R,d.tex['raita'],0,t,1,0,0);if(t<147.55)d.drawSprites(t,BSA);const {S}=S3(d,'ball2');const f=Math.max(0,Math.trunc(12.5*(d.songRow(t-0.2)-2495)));   // 0x24f08: camera frame = trunc((song row - row at scene start) * 12.5)
    S.pose(f);const cam=S.camera('Camera01',f);if(cam)drawScene(R,S,cam,d.mats('ball2'),{frame:f,t,fogK:d.fogAt(t),cull:false});}},
+ // 0.1 s gap between tv (ends 171.9) and flesh (starts 172.0): kept as measured from the script, not checked against the original
  {name:'tv',t0:157.8,t1:171.9,tex:['envplane','0ikkuna'],
   render(d,R,lt,t){const {S}=S3(d,'tvfin');const f=Math.max(0,(lt-0.2)*TICK);   // camera frame = scene tick of the render shown (tick 308 for the 162.5 s grab: hook of the render at 11361 = 21*541, see fb.py trace)
    S.pose(f);const cam=S.camera("Camera01",f);const mf=d.mats('tvfin'),fbm=d.fbTex&&{tex:d.fbTex,mode:1,unlit:true,fx:true,us:317.5/320,vs:197.5/200};

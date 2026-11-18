@@ -5,7 +5,7 @@ const TEST=new URLSearchParams(location.search).has('test');window.demoTest=TEST
 const $=id=>document.getElementById(id);
 const d=new Demo();window.demo=d;
 const cvs=$('c'),ctx=cvs.getContext('2d');
-let dur=189.5,playing=false,tBase=0,wall0=0,cp=null,ac=null,audioReady=null,started=false,muted=false,lastDraw=-1;
+let dur=189.5,playing=false,tBase=0,wall0=0,cp=null,ac=null,buf=null,ended=false,seekAt=-1,audioReady=null,started=false,muted=false,lastDraw=-1;
 const now=()=>performance.now()/1000;
 const cur=()=>playing?Math.min(dur,tBase+(now()-wall0)):tBase;
 const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
@@ -15,9 +15,11 @@ async function initAudio(){
   ac=new AudioContext();cp=new ChiptuneJsPlayer({context:ac,repeatCount:0,interpolationFilter:8});
   cp.gain.connect(ac.destination);   // chiptune3 only routes to the speakers itself when it creates its own context
   await new Promise(r=>cp.onInitialized(r));
-  const buf=await (await fetch('assets/music/hypermmx.xm')).arrayBuffer();
-  cp.onProgress(m=>{if(playing&&Math.abs(m.pos-cur())>0.25){tBase=m.pos;wall0=now();}});   // keep visuals locked to the module clock
-  cp.onEnded(()=>{playing=false;tBase=dur;sync();});
+  buf=await (await fetch('assets/music/hypermmx.xm')).arrayBuffer();
+  // keep visuals locked to the module clock: worklet pos = rendered position, so subtract the output latency to get the heard one;
+  // ignore the messages still in flight right after a seek (stale pos)
+  cp.onProgress(m=>{if(!playing||now()-seekAt<0.15)return;const p=m.pos-((ac.outputLatency||0)+(ac.baseLatency||0));if(Math.abs(p-cur())>0.05){tBase=Math.max(0,p);wall0=now();}});
+  cp.onEnded(()=>{playing=false;ended=true;tBase=dur;sync();});
   cp.play(buf);audioReady=true;
 }
 // CRT option: scanline overlay, one band per canvas row (240), period = k whole device px (no moire); off by default, display only.
@@ -44,19 +46,21 @@ layout();
 function sync(){$('pp').textContent=playing?'Pause':'Play';}
 async function play(){
   if(!started){started=true;$('go').remove();await initAudio().catch(e=>console.error(e));tBase=0;}
+  else if(cp&&ended){ended=false;tBase=0;cp.play(buf);}   // the worklet stopped the module at the end: start it again
   else if(cp){cp.unpause();}
   if(tBase>=dur-0.05){seek(0);}
   playing=true;wall0=now();ac&&ac.resume();sync();
 }
 function pause(){if(!playing)return;tBase=cur();playing=false;cp&&cp.pause();sync();}
-function seek(t){t=Math.max(0,Math.min(dur-0.01,t));tBase=t;wall0=now();cp&&cp.setPos(t);draw(t);}
+function seek(t){t=Math.max(0,Math.min(dur-0.01,t));tBase=t;wall0=now();seekAt=now();cp&&cp.setPos(t);draw(t);}
 function toggle(){playing?pause():play();}
 $('pp').onclick=toggle;$('go').onclick=()=>play();
 $('b10').onclick=()=>seek(cur()-10);$('f10').onclick=()=>seek(cur()+10);
 $('fs').onclick=()=>{document.fullscreenElement?document.exitFullscreen():$('stage').requestFullscreen();};
-const sk=$('seek');let drag=false;sk.oninput=()=>{drag=true;seek(sk.value/10);};sk.onchange=()=>{drag=false;};
+const sk=$('seek');let drag=false;sk.oninput=()=>seek(sk.value/10);sk.onpointerdown=()=>{drag=true;};addEventListener('pointerup',()=>{drag=false;});
 cvs.ondblclick=()=>$('fs').click();
 addEventListener('keydown',e=>{const k=e.key;const big=e.shiftKey?10:5;
+  if(e.target===sk&&(k==='ArrowLeft'||k==='ArrowRight'))e.preventDefault();   // else the range input also steps its own value and re-seeks
   if(k===' '){e.preventDefault();toggle();}else if(k==='ArrowLeft'){seek(cur()-big);}else if(k==='ArrowRight'){seek(cur()+big);}
   else if(k==='ArrowUp'||k==='ArrowDown'){const t=cur();const i=SCENES.findIndex(s=>t>=s.t0&&t<s.t1);const j=Math.max(0,Math.min(SCENES.length-1,i+(k==='ArrowUp'?-1:1)));seek(SCENES[j].t0+0.01);}
   else if(k==='Home')seek(0);else if(k==='End')seek(dur-1);else if(k==='f'||k==='F')$('fs').click();

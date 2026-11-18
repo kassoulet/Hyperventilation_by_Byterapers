@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 re/mem*.bin
 re/state.bin
+.claude/
+undefined/
