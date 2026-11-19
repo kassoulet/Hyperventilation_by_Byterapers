@@ -1,0 +1,1623 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>HYPERVENTILATION (Byterapers, Remedy '98) - effects, engine,
+objects</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+  :root{--bg:#fff;--fg:#1d1d22;--mut:#666;--ac:#c4155a;--code:#f3f3f6;--bd:#d8d8e0}
+  @media (prefers-color-scheme:dark){:root{--bg:#0b0b10;--fg:#d8d8e0;--mut:#9a9aa8;--ac:#ff6a9a;--code:#17171f;--bd:#33333f}}
+  *{box-sizing:border-box}
+  body{margin:0 auto;max-width:62rem;padding:0 16px;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,sans-serif}
+  #wunav{display:flex;gap:16px;flex-wrap:wrap;padding-top:12px;padding-bottom:8px;border-bottom:1px solid var(--bd);font-size:14px}
+  a{color:var(--ac)}
+  h1,h2,h3,h4{line-height:1.25;margin-top:1.8em}
+  img{max-width:100%;height:auto;image-rendering:auto}
+  pre{background:var(--code);border:1px solid var(--bd);border-radius:4px;padding:10px 12px;overflow-x:auto;font-size:13px;line-height:1.4}
+  code{background:var(--code);padding:1px 4px;border-radius:3px;font-size:.92em;overflow-wrap:anywhere}
+  pre code{background:none;padding:0;overflow-wrap:normal}
+  table{border-collapse:collapse;display:block;overflow-x:auto;max-width:100%}
+  td,th{border:1px solid var(--bd);padding:4px 8px}
+  blockquote{border-left:3px solid var(--bd);margin-left:0;padding-left:14px;color:var(--mut)}
+  #TOC{font-size:14px}#TOC ul{padding-left:1.2em}
+  #TOC>ul{padding-left:0;list-style:none}
+  details#toc-box{margin:12px 0}
+  </style>
+</head>
+<body>
+<nav id="wunav"><a href="../index.html">&larr; the demo</a> <a href="WRITEUP-asm.html">asm</a> <a href="WRITEUP-effects.html">effects</a> <a href="https://github.com/kassoulet/Hyperventilation_by_Byterapers">README on GitHub</a></nav>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a
+href="#hyperventilation-byterapers-remedy-98---effects-engine-objects"
+id="toc-hyperventilation-byterapers-remedy-98---effects-engine-objects">HYPERVENTILATION
+(Byterapers, Remedy '98) - effects, engine, objects</a>
+<ul>
+<li><a href="#0-at-a-glance" id="toc-0-at-a-glance">0. At a
+glance</a></li>
+<li><a href="#1-direction-a-script-driven-by-the-music"
+id="toc-1-direction-a-script-driven-by-the-music">1. Direction: a script
+driven by the music</a></li>
+<li><a href="#2-the-3d-engine" id="toc-2-the-3d-engine">2. The 3D
+engine</a>
+<ul>
+<li><a
+href="#lighting-model-reverse-engineered-0x463ec-ported-in-webjsenginejs-drawscenescene3dlightsat"
+id="toc-lighting-model-reverse-engineered-0x463ec-ported-in-webjsenginejs-drawscenescene3dlightsat">Lighting
+model (reverse engineered, 0x463ec; ported in
+<code>web/js/engine.js</code>
+<code>drawScene</code>/<code>Scene3D.lightsAt</code>)</a></li>
+<li><a
+href="#the-172-1858-s-scene-a-second-iso-surface--spark-particles-fully-reversed"
+id="toc-the-172-1858-s-scene-a-second-iso-surface--spark-particles-fully-reversed">The
+172-185.8 s scene: a second iso-surface + spark particles (fully
+reversed)</a></li>
+<li><a href="#0room33ds-73720-bytes"
+id="toc-0room33ds-73720-bytes">0room3.3ds (73720 bytes)</a></li>
+<li><a href="#ball23ds-20712-bytes"
+id="toc-ball23ds-20712-bytes">ball2.3ds (20712 bytes)</a></li>
+<li><a href="#dmoykk23ds-77152-bytes"
+id="toc-dmoykk23ds-77152-bytes">dmoykk2.3ds (77152 bytes)</a></li>
+<li><a href="#hallu3ds-56254-bytes"
+id="toc-hallu3ds-56254-bytes">hallu.3ds (56254 bytes)</a></li>
+<li><a href="#meta13ds-3010-bytes"
+id="toc-meta13ds-3010-bytes">meta1.3ds (3010 bytes)</a></li>
+<li><a href="#morph3ds-24509-bytes"
+id="toc-morph3ds-24509-bytes">morph.3ds (24509 bytes)</a></li>
+<li><a href="#morph23ds-16881-bytes"
+id="toc-morph23ds-16881-bytes">morph2.3ds (16881 bytes)</a></li>
+<li><a href="#pallo3ds-14602-bytes"
+id="toc-pallo3ds-14602-bytes">pallo.3ds (14602 bytes)</a></li>
+<li><a href="#piikit23ds-96444-bytes"
+id="toc-piikit23ds-96444-bytes">piikit2.3ds (96444 bytes)</a></li>
+<li><a href="#space23ds-48221-bytes"
+id="toc-space23ds-48221-bytes">space2.3ds (48221 bytes)</a></li>
+<li><a href="#tvfin3ds-28878-bytes"
+id="toc-tvfin3ds-28878-bytes">tvfin.3ds (28878 bytes)</a></li>
+</ul></li>
+<li><a href="#5-pictures-hyperdat-pngs"
+id="toc-5-pictures-hyperdat-pngs">5. Pictures (Hyper.dat PNGs)</a></li>
+<li><a
+href="#5b-2d3d-art-used-inventory-of-hyperdat-and-what-the-code-generates"
+id="toc-5b-2d3d-art-used-inventory-of-hyperdat-and-what-the-code-generates">5b.
+2D/3D art used (inventory of Hyper.dat and what the code generates)</a>
+<ul>
+<li><a href="#pictures-24-bit-320x200-full-screen-photographs-15-files"
+id="toc-pictures-24-bit-320x200-full-screen-photographs-15-files">Pictures
+(24-bit, 320x200: full-screen photographs, 15 files)</a></li>
+<li><a href="#lyric--credit-strips-8-bit-palette-torn-tape-labels"
+id="toc-lyric--credit-strips-8-bit-palette-torn-tape-labels">Lyric /
+credit strips (8-bit palette, torn-tape labels)</a></li>
+<li><a href="#textures-environmentbump-maps-sprites"
+id="toc-textures-environmentbump-maps-sprites">Textures,
+environment/bump maps, sprites</a></li>
+<li><a href="#3d-meshes-11-files-with-3ds-content"
+id="toc-3d-meshes-11-files-with-3ds-content">3D meshes (11 files with
+3DS content)</a></li>
+<li><a href="#generated-by-code-no-file-in-the-archive"
+id="toc-generated-by-code-no-file-in-the-archive">Generated by code (no
+file in the archive)</a></li>
+<li><a href="#complete-directory-of-hyperdat"
+id="toc-complete-directory-of-hyperdat">Complete directory of
+Hyper.dat</a></li>
+</ul></li>
+<li><a href="#6-port-vs-original" id="toc-6-port-vs-original">6. Port vs
+original</a>
+<ul>
+<li><a href="#halftone-scene-1369-1398-s---fully-reversed"
+id="toc-halftone-scene-1369-1398-s---fully-reversed">Halftone scene
+(136.9-139.8 s) - fully reversed</a></li>
+<li><a href="#swirl-scene-1329-1369-s---fully-reversed"
+id="toc-swirl-scene-1329-1369-s---fully-reversed">Swirl scene
+(132.9-136.9 s) - fully reversed</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</nav>
+<h1
+id="hyperventilation-byterapers-remedy-98---effects-engine-objects">HYPERVENTILATION
+(Byterapers, Remedy '98) - effects, engine, objects</h1>
+<p>Code: Mr.Sex, Gurdan. Visuals: Mistral, Mike, Jate. Music: Yolk &amp;
+Legend (<code>Hypermmx.xm</code>, 52 orders, 189.5 s). A true-colour
+software-3D demo: Watcom C++ 32-bit under PMODE/W, MIDAS 0.7 b1 for
+sound, VESA 2.0 linear framebuffer, <strong>320x240 at 32/24/16/15
+bpp</strong> (menu at start; "S" = secret mode is not found in normal
+VESA). The picture is a <strong>320x200 viewport centred in the 320x240
+screen (20-pixel black bars)</strong>; 320x240 has square pixels, so the
+correct display aspect is 4:3 (the port shows the 320x240 canvas at 4:3,
+never letterboxed square-pixel 16:10).</p>
+<h2 id="0-at-a-glance">0. At a glance</h2>
+<p><img src="figures/error_per_frame.png" alt="error per frame" /></p>
+<p><em>Figure: mean absolute error (0-255) of the port against 37 frames
+of the emulated original (every 5 s), per scene; the dashed line is the
+mean.</em></p>
+<p><img src="figures/compare_scenes_1.png" alt="contact sheet 1" /> <img
+src="figures/compare_scenes_2.png" alt="contact sheet 2" /></p>
+<p><em>Figures: port (left) against the emulator's reference frame
+(right) for twelve of the 37 frames.</em></p>
+<p><img src="figures/scenes_3d.png" alt="3D scenes" /></p>
+<p><em>Figure (3D): the 3DS scenes of the demo as wireframe-shaded
+meshes, with the Camera01 path in red. Explore them interactively in <a
+href="../viewer3d.html"><code>web/viewer3d.html</code></a> (three.js:
+orbit, wireframe, light and camera-path toggles, and the space scene's
+cavern sphere following the camera). Everything here is regenerated by
+<code>node tools/export_meshes.mjs &gt; web/assets/meshes.json</code>
+and <code>python3 tools/make_figures.py FRAMES_DIR</code>.</em></p>
+<h2 id="1-direction-a-script-driven-by-the-music">1. Direction: a script
+driven by the music</h2>
+<p>The demo is one table of 28-byte records at 0x104aa0
+<code>{order,row,type,func,a,b,c}</code> (168 records), fired when MIDAS
+reports <code>order*64+row</code> (see WRITEUP-asm.md, snippet 6).
+Animation time is the 70 Hz timer
+(<code>1 tick = 1 3DS keyframe</code>). We rebuilt the timeline in
+<code>web/assets/script.json</code> (order/row converted with the XM
+tempo model <code>tools/xmtime.py</code>) and replay it exactly: 43
+sprites (0x105dfc: image, blend alpha, flags, position), fades, flashes,
+scene switches. Original scene-switch times (seconds):</p>
+<table>
+<thead>
+<tr>
+<th>time</th>
+<th>event</th>
+<th>scene (render callback)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.0</td>
+<td>start</td>
+<td><strong>space</strong> - <code>space2.3ds</code>, Orion nebula dome,
+arches, ABBA photos fading over (cb 0x20f68)</td>
+</tr>
+<tr>
+<td>30.0</td>
+<td>red flash</td>
+<td><strong>lava tunnel</strong> (cb 0x23528, init 0x2329c; a distortion
+grid with three moving 1/r attractors, see WRITEUP-asm.md sections 11
+and 49; bit-exact) with the <code>skenenp2</code> kid sprite</td>
+</tr>
+<tr>
+<td>44.1</td>
+<td></td>
+<td><strong>room</strong> - <code>0room3.3ds</code> (cb 0x1f040)</td>
+</tr>
+<tr>
+<td>51.2</td>
+<td>hyperven.png</td>
+<td>title sprite over a portrait photo (purple.png)</td>
+</tr>
+<tr>
+<td>58.0</td>
+<td>white flash</td>
+<td><strong>blob</strong> - <code>dmoykk2.3ds</code>, env-mapped
+1473-vertex blob on <code>keltanai.png</code> (cb 0x24bac)</td>
+</tr>
+<tr>
+<td>72.4</td>
+<td></td>
+<td><strong>hallu</strong> - <code>hallu.3ds</code>: glass dome, grass,
+comet particle (cb 0x1e7d8)</td>
+</tr>
+<tr>
+<td>83.1 / 93.7</td>
+<td></td>
+<td><strong>piikit</strong> - <code>piikit2.3ds</code> (cb 0x1f45c);
+returns to hallu 86.6-93.7</td>
+</tr>
+<tr>
+<td>100.6</td>
+<td></td>
+<td><strong>metaballs</strong> (cb 0x24578), orange-sweater lady
+<code>metanain.png</code></td>
+</tr>
+<tr>
+<td>114.7</td>
+<td>white flash</td>
+<td>photos + lyric strips (cb 0x20bc4): <code>abba45</code>,
+<code>iwish</code>, <code>itused</code>, <code>whathap</code>,
+<code>when</code></td>
+</tr>
+<tr>
+<td>129.6 - 143.6</td>
+<td></td>
+<td>green / orange <strong>swirl tunnels</strong> (holemap, forcemap,
+mulju textures), <code>sos</code> text</td>
+</tr>
+<tr>
+<td>143.7</td>
+<td></td>
+<td>pink <code>raita</code> backdrop with three env-mapped balls
+(<code>ball2.3ds</code>)</td>
+</tr>
+<tr>
+<td>157.8</td>
+<td></td>
+<td><strong>TV</strong> - <code>tvfin.3ds</code> dark grid, cyan
+particles; credits strips (mrsex, gurdan, mistral, mike, jate, yolque,
+lebeau)</td>
+</tr>
+<tr>
+<td>171.9</td>
+<td>red flash</td>
+<td><strong>flesh tube</strong> - <code>morph2.3ds</code> (MORMAP +
+MORBUMP + MORENV) with orange particles, "HYPERVENTILATION"/"BYTERAPERS"
+strips</td>
+</tr>
+<tr>
+<td>182.5</td>
+<td>white fade</td>
+<td><code>youjust.png</code> ("You just eat, sleep, go on stage and
+nothing more") on white; ends 185.8+</td>
+</tr>
+</tbody>
+</table>
+<p>(The cb trace of the original after 100 s was lost to an emulator
+problem in the first run; the times after 100 s come from the script and
+from the re-rendered frames in <code>re/golden/</code>.) Sprite
+commands: 1 start, 2 stop, 4 fade-in (c ticks), 5 fade-out (c ticks), 6
+fade to colour, 7 flash colour (duration in ticks), 8 cancel; sprite
+kinds in the table: 0x10001 = photo (alpha 0.4-0.55, used as is), 2 =
+lyric/credit strip image, 1 = abba41-2.png, the full-opacity photo of
+the 114.7 s lyric scene. <strong>The sprite table starts one 36-byte
+record before 0x105dfc</strong>: record 0 is <code>lasit.png</code> (the
+4-faces photo at 5.3-8.8 s), so the script's sprite ids index the table
+directly and the dumped list is shifted by one (found by correlating the
+original's frames with every image; this off-by-one had shown the wrong
+photo and lyric strip all over the demo).</p>
+<h2 id="2-the-3d-engine">2. The 3D engine</h2>
+<p>Classes seen through RTTI strings:
+<code>beSCENE, beCAMERA, beLIGHT, beMESH, beSPLINE/beSPLINEMESH, bePOSKEY, bePARTICLE_SYSTEM, beISO, beQUAT, beMATRIX, beRASTER, beCLIPPER, beBITMAP, beVESA</code>.</p>
+<ul>
+<li><strong>Loading</strong>: <code>.3DS</code> (R3/R4) parsed at
+start-up by the scene constructor 0x2bf23; material names like
+<code>SEINA.BMP</code>/<code>DOOM.GIF</code> in the files are redirected
+to the <code>.PNG</code> in <code>Hyper.dat</code> by the bitmap loader
+(0x49ee4; beBITMAP supports PNG/BMP/PCX). <code>Hyper.dat</code> is a
+"(B)ZIP" archive (see README).</li>
+<li><strong>Coordinates</strong>: 3DS Z-up is converted to the engine's
+Y-up by swapping y/z (camera position at t=10 s measured as
+(-1256,5080,-949) = 3DS (-1256,-949,5080)).</li>
+<li><strong>Keyframer</strong>: position/rotation/scale/FOV/roll tracks,
+<strong>frame = 70 Hz tick</strong>; rotation keys are 3DS axis-angle
+(inverse convention) accumulated into quaternions; several cameras per
+file (Camera01..03) selected by the scene functions.</li>
+<li><strong>Projection</strong>: the 3DS FOV track is used as the
+<em>vertical</em> FOV of the 320x200 viewport (measured: FOV 94.29 deg
+-&gt; tan(half) 1.065, horizontal 1.704 = 1.6x).</li>
+<li><strong>Pipeline</strong>: transform -&gt; light (per-vertex RGB,
+byte per channel) -&gt; clip -&gt; divide -&gt; scan conversion with a
+<strong>16-bit Z-buffer</strong> (no sorting) -&gt; 32-bit frame
+buffer.</li>
+<li><strong>Texture mappers</strong> (see asm snippets 1-3): paletted
+256-wide textures with 16-pixel perspective sub-spans, per-channel
+Gouraud through a 64 KB shade LUT, 32-bit texel variants, environment
+mapping (materials with a reflection map: <code>MOYKYENV</code>,
+<code>ENVGREEN</code>, <code>MORENV</code>, <code>BALL.PNG</code>...)
+and bump mapping (<code>MORBUMP</code>, <code>bump.png</code>, material
+MORFFI), selected by self-modified code.</li>
+<li><strong>Particles</strong>: lights named <code>particle00..03</code>
+in the 3DS files are emitters (<code>bePARTICLE_SYSTEM</code>, sprite
+<code>particle.png</code>, rand()-driven spread, per-tick spawn at
+0x1e8e8); <code>glow</code>/<code>flash</code>/<code>flare</code> lights
+draw <code>glow.png</code>/<code>lens.png</code> flares.</li>
+<li><strong>Morphing</strong>: <code>morph.3ds</code> (3 targets of 164
+vertices) and <code>morph2.3ds</code> (3 x 130) are interpolated between
+objects (strings "Cannot find morph object").</li>
+<li><strong>Metaballs / iso-surfaces</strong> (100.7-114.9 s):
+<code>meta1.3ds</code> is only a placeholder node + camera; the surface
+is generated every frame (class at 0x36914..0x37da4, textures
+<code>isomap.png</code>/<code>envi2.png</code>). Ported 1:1: 5 balls,
+each position <code>0.4*360*(sin a1, cos a2, sin a3)</code> with three
+10-bit phases A,B,C advancing by <code>speed*ticks</code> (speeds
+<code>[1,4,-2,3,5]</code>, <code>[1,-4,-3,4,-2]</code>, B==C),
+<code>a1=A+B+C</code>, <code>a2=A+C</code>, <code>a3=B-C/2</code>; field
+= Wyvill soft object <code>1-4/9(r/R)^6+17/9(r/R)^4-22/9(r/R)^2</code>
+(R=198, zero beyond), summed on a 17^3 grid (step 45, extent +-360), iso
+level 0.12, marching cubes (the original's edge/triangle tables are
+copied to <code>assets/mc.json</code>), normals from forward
+differences, texture coords <code>4(1+atan2(z,x)/pi)</code>,
+<code>4(1+atan2(z,y)/pi)</code>. The object is placed by the
+<code>meta</code> node's position track driven by music time
+<code>(order*64+row-0x740)*10</code>. The projection was recovered from
+the emulator's projected vertices (RANSAC DLT): focal 197.58, centre
+(159.5, 99.5), model space is the 3DS space with y/z swapped. The look
+(dark translucent blue, depth-of-field blur on some frames) comes from a
+depth-sorted translucent pass (<code>[cam+0x3c]=7</code>, bucket flush
+0x2ae88) that is not ported: the port draws z-buffered
+<code>0.35*isomap + 0.4*envi2</code>.</li>
+<li><strong>2D</strong>: sprites with alpha/additive blending, a global
+flash/fade-to-colour layer, "writer" strips (lyrics as torn tape
+labels).</li>
+<li><strong>Music</strong>: MIDAS 0.7 reads the XM; position feeds the
+script.</li>
+</ul>
+<h3
+id="lighting-model-reverse-engineered-0x463ec-ported-in-webjsenginejs-drawscenescene3dlightsat">Lighting
+model (reverse engineered, 0x463ec; ported in
+<code>web/js/engine.js</code>
+<code>drawScene</code>/<code>Scene3D.lightsAt</code>)</h3>
+<p>Per-vertex, per-channel, point lights only, no specular.
+<code>L = ambient(3DS chunk 0x2100, 0..255) + 2 + sum over lights [ smoothstep(inner, outer) * multiplier * max(0, N.D) / |D| * light colour (0..255) ]</code>,
+clamped to 250, optionally multiplied by a depth fade
+<code>clamp(1 - z*k, 0, 1)</code> (on in the hallu/piikit/tv scenes: k =
+0.00194, 0.00078/0.0009, 0.00068), then
+<code>texel * floor(L/4) / 64</code> per channel through the 64 KB shade
+LUT (63 light levels per channel, visible as banding on the room walls).
+The numbers were validated against the emulated original: 0.1 %
+agreement on a 10-light room vertex (the remainder is the rounding of
+the logged inputs). Lights carry the 3DS colour (chunk 0x0010 x255),
+inner/outer range (0x4659/0x465A) and multiplier (0x465B, 5.0 in hallu);
+a light with outer range 0 contributes nothing. The 3DS light
+<em>position</em> tracks are keyframed (TCB), as for objects. The
+<strong>"flash" lights</strong> (the amber and blue running lights in
+the room, the five in the space dome, a few in hallu/piikit) have their
+ranges animated by the scene code:
+<code>range = base * max(0, cos(2*pi*t/1.19 + phase))</code>, four
+lights a quarter-period apart, which makes the light run down the
+corridor. That animation is not in the 3DS files; it was sampled from
+the original (<code>re/lightdump.py</code>,
+<code>tools/bake_lights.py</code> -&gt;
+<code>web/assets/lightanim.json</code>) and is replayed with linear
+interpolation. The <code>morph2</code> flesh scene never calls the
+lighter, so the port draws it unlit.</p>
+<h3
+id="the-172-1858-s-scene-a-second-iso-surface--spark-particles-fully-reversed">The
+172-185.8 s scene: a second iso-surface + spark particles (fully
+reversed)</h3>
+<p>An earlier version of this section described a "flesh" scene built on
+<code>morph2.3ds</code>. That was wrong: at 175 s the original executes
+none of the 0x25xxx morph code. The scene is the second iso-surface
+object (init 0x23814, render callback 0x239bc, sampler 0x23ac0) with
+<code>metamap0.png</code> (red crinkle), <code>metaenv0.png</code>
+(environment) and <code>bump.png</code> (swirl bump), plus a particle
+emitter. Everything below was read from the code and checked against the
+emulator:</p>
+<ul>
+<li><strong>Camera</strong>: at (0,0,-1000), look-at (2,2,0), FOV 78
+-&gt; focal 160/tan(39 deg) = 197.58, screen centre (159.5, 99.5)
+(RANSAC DLT on the projected vertices gives K = 197.58/159.5/99.5, R =
+diag(1,-1,1) + 0.002 tilt).</li>
+<li><strong>Field</strong>: 10 balls on a 17^3 grid (step 100, extent
++-800, iso 0.12), the same Wyvill polynomial (R = 0.55*800). Ball i
+moves along y by a per-<em>frame</em> speed
+<code>[40,-20,-40,134,40,-35,50,57,-90,68]</code>; at |y| &gt;= 1000 it
+re-enters at the other end with a new random (x,z) = rand()%400 (init:
+rand()%500-250). rand() is Watcom's LCG
+(<code>s = s*0x41c64e6d+0x3039; (s&gt;&gt;16)&amp;0x7fff</code>) seeded
+by <code>time()</code>, shared with the particles, so the port replays
+the re-entry positions logged from the reference run
+(<code>assets/isoballs.json</code>).</li>
+<li><strong>Surface</strong>: same mesher;
+<code>[obj+0x184] &amp; 1</code> selects planar v: u =
+4(1+atan2(z,x)/pi), v = 4 + 0.005 y. Normals are the (un-negated) field
+gradient; env coords u = 0.5(1+n.right), v = 0.5(1-n.up) (0x4b045).
+Mapper: texture + bump-perturbed environment, averaged (see asm section
+13); texture palettes are the PNG palettes, no lighting.</li>
+<li><strong>Particles</strong> (<code>isoParticles</code>): 49 per
+frame, v = U(-250,250)^3, colour (100,40,25)+-12.8, size 30..35
+(x1.02^dt per frame), life 250 ticks, gravity (0,-1,0), additive 16x16
+<code>particle.png</code> blit with LUT row <code>tint&gt;&gt;2</code>
+of the second shade table (<code>min(255, texel*row/32)</code>),
+z-tested at the centre pixel against the scene depth.</li>
+<li><strong>Start flash</strong>: script command 7 fades from red over
+40 ticks counted from the scene's first frame (172.0), applied over the
+whole frame.</li>
+<li>The reference frames are displayed with a 0-2 frame lag (the image
+only changes every third 7-tick frame during this scene), which explains
+small position offsets.</li>
+</ul>
+<h3 id="0room33ds-73720-bytes">0room3.3ds (73720 bytes)</h3>
+<ul>
+<li>meshes: 62, vertices 1159, triangles 922; lights: 24; cameras:
+Camera01, Camera02, Camera03</li>
+<li>materials: 1 -&gt; SEINA.BMP; 2 -&gt; PLATE.GIF; 3 -&gt; LATTIA.BMP;
+8FLOOR -&gt; 0FLOOR.BMP; 9REUNA -&gt; 0REUNA.BMP; 10PYLVS -&gt;
+PYLVAS.BMP; 1SEIN -&gt; SEINA2.BMP; RAKO -&gt; RAKO.BMP; 6 -&gt; 6.BMP;
+HISSI -&gt; HISSI.BMP</li>
+<li>largest meshes: lattia01 (77v/120f), katto (77v/120f), katto01
+(56v/56f), lattia02 (56v/56f), wall01 (22v/20f), wall03 (22v/20f)</li>
+</ul>
+<h3 id="ball23ds-20712-bytes">ball2.3ds (20712 bytes)</h3>
+<ul>
+<li>meshes: 3, vertices 390, triangles 768; lights: 3; cameras:
+Camera01</li>
+<li>materials: BALL -&gt; BALL.PNG; PAIKKA -&gt; BALLMID.PNG</li>
+<li>largest meshes: ball (130v/256f), ball01 (130v/256f), ball02
+(130v/256f)</li>
+</ul>
+<h3 id="dmoykk23ds-77152-bytes">dmoykk2.3ds (77152 bytes)</h3>
+<ul>
+<li>meshes: 1, vertices 1473, triangles 2942; lights: 3; cameras:
+Camera01</li>
+<li>materials: MATE -&gt; MOYKYMAP.PNG/MOYKYENV.PNG</li>
+<li>largest meshes: Default (1473v/2942f)</li>
+</ul>
+<h3 id="hallu3ds-56254-bytes">hallu.3ds (56254 bytes)</h3>
+<ul>
+<li>meshes: 50, vertices 1087, triangles 1180; lights: 15; cameras:
+Camera01, Camera02, Camera03</li>
+<li>materials: 1 -&gt; RUOHO.BMP; GREEN -&gt; 0IKKUNA.BMP; 2 -&gt;
+MARMORI2.GIF; KUPOLI -&gt; ENVGREEN.BMP</li>
+<li>largest meshes: kupoli (65v/126f), obu (32v/54f), obu01 (32v/54f),
+obu02 (32v/54f), pohja (32v/32f), putki01 (16v/24f)</li>
+</ul>
+<h3 id="meta13ds-3010-bytes">meta1.3ds (3010 bytes)</h3>
+<ul>
+<li>meshes: 1, vertices 8, triangles 12; lights: 0; cameras:
+Camera01</li>
+<li>materials: META -&gt; flat colour</li>
+<li>largest meshes: meta (8v/12f)</li>
+</ul>
+<h3 id="morph3ds-24509-bytes">morph.3ds (24509 bytes)</h3>
+<ul>
+<li>meshes: 3, vertices 492, triangles 972; lights: 0; cameras:
+Camera01</li>
+<li>materials: 1 -&gt; DOOM.GIF/ENVPLANE.BMP</li>
+<li>largest meshes: ball (164v/324f), ball000 (164v/324f), ball000000
+(164v/324f)</li>
+</ul>
+<h3 id="morph23ds-16881-bytes">morph2.3ds (16881 bytes)</h3>
+<ul>
+<li>meshes: 3, vertices 390, triangles 768; lights: 1; cameras:
+Camera01</li>
+<li>materials: MORFFI -&gt; MORMAP.PNG/MORBUMP.PNG/MORENV.PNG</li>
+<li>largest meshes: morph (130v/256f), morph01 (130v/256f), morph01000
+(130v/256f)</li>
+</ul>
+<h3 id="pallo3ds-14602-bytes">pallo.3ds (14602 bytes)</h3>
+<ul>
+<li>meshes: 2, vertices 260, triangles 512; lights: 3; cameras:
+Camera01</li>
+<li>materials: BALL -&gt; PALLO.PNG</li>
+<li>largest meshes: ball (130v/256f), ball01 (130v/256f)</li>
+</ul>
+<h3 id="piikit23ds-96444-bytes">piikit2.3ds (96444 bytes)</h3>
+<ul>
+<li>meshes: 13, vertices 1832, triangles 3340; lights: 10; cameras:
+Camera01, Camera02, Camera03</li>
+<li>materials: 1 -&gt; KUVIO.GIF; RUOHO -&gt; RUOHO.BMP; ENVGREEN -&gt;
+ENVGREEN.BMP</li>
+<li>largest meshes: soiro01 (480v/934f), piikki01 (420v/795f), piikki02
+(349v/665f), Object04 (257v/430f), pallo01 (114v/224f), moto
+(34v/64f)</li>
+</ul>
+<h3 id="space23ds-48221-bytes">space2.3ds (48221 bytes)</h3>
+<ul>
+<li>meshes: 18, vertices 843, triangles 1464; lights: 12; cameras:
+Camera01</li>
+<li>materials: 1 -&gt; LAATTA.GIF; 3 -&gt; ORIONMOS.BMP; 4 -&gt;
+ORIONMOS.BMP; 5 -&gt; DOOM.GIF</li>
+<li>largest meshes: fd (130v/256f), lock (70v/108f), kaari01 (44v/80f),
+kaari02 (44v/80f), kaari03 (44v/80f), kaari04 (44v/80f)</li>
+</ul>
+<h3 id="tvfin3ds-28878-bytes">tvfin.3ds (28878 bytes)</h3>
+<ul>
+<li>meshes: 16, vertices 488, triangles 711; lights: 4; cameras:
+Camera01</li>
+<li>materials: 6ENVI -&gt; ENVPLANE.BMP; FEEDBACK -&gt; flat colour;
+GRID -&gt; 0IKKUNA.BMP</li>
+<li>largest meshes: box (216v/300f), putki (48v/96f), Object (24v/43f),
+tv01 (24v/43f), Object01 (24v/43f), Object02 (24v/43f)</li>
+</ul>
+<p><code>pallo.3ds</code> (stored in Hyper.dat as
+<code>PALLO.PNG</code>) and <code>3ds.bak</code> are older copies of the
+<code>ball2</code> scene and are not loaded by the demo.</p>
+<p>Scene -&gt; files (from the load trace in
+<code>re/boot_trace.py</code>): space = space2.3ds + laatta, orionmos
+(map and env), doom; room = 0room3.3ds + seina, plate, lattia, 0floor,
+0reuna, pylvas, seina2, rako, 6, hissi; hallu = hallu.3ds + ruoho,
+0ikkuna, marmori2, envgreen; piikit = piikit2.3ds + kuvio, ruoho,
+envgreen; morph = morph.3ds + doom, envplane; morph2 = morph2.3ds +
+mormap, morbump, morenv; blob = dmoykk2.3ds + moykymap, moykyenv; balls
+= ball2.3ds + ball, ballmid; tv = tvfin.3ds + envplane, 0ikkuna;
+metaballs = isomap, envi2, metamap0, metaenv0, bump.</p>
+<h2 id="5-pictures-hyperdat-pngs">5. Pictures (Hyper.dat PNGs)</h2>
+<p>Photos/pictures (320x200): abba, abba41-2, abba45, folio, lavalla1-4,
+roskaa1-7 (noise-lines "TV" frames), keltanai, lasit, metanain, photo,
+purple, raita, skenenp2, sos, sos2, tokavek, youjust; lyric / credit
+strips: beauty, love, gone, gone2, code, gfx, mrsex, gurdan, mistral,
+mike, jate, musa, yolque, and, lebeau, hyperven, bytelogo, iwish,
+itused, when, whathap, thelove. Textures: see the contact sheet
+<code>shots/</code> and <code>web/assets/img</code>.</p>
+<h2
+id="5b-2d3d-art-used-inventory-of-hyperdat-and-what-the-code-generates">5b.
+2D/3D art used (inventory of Hyper.dat and what the code generates)</h2>
+<p><strong>Container.</strong> All art is in <code>Hyper.dat</code>, the
+"(B)ZIP" archive of section 2 / README: 16-byte header
+(<code>(B)ZIP</code>, 0x102, count 104), then 104 entries of 0x30 bytes
+<code>{name[0x20], offset, size, size, 0}</code>; files are stored
+<strong>raw, uncompressed</strong> (the archive reader is at 0x26cb0,
+the bitmap loader at 0x49ee4). The pictures are therefore ordinary PNG
+files, the meshes ordinary 3D Studio (R3/R4) files: extraction is just
+slicing at <code>offset, size</code> (<code>re/dat/</code> holds the 104
+slices, numbered in directory order). Facts below were re-read from
+<code>Hyper.dat</code> with Pillow (sizes, modes, colour counts) and
+from the 3DS chunks (<code>tools/parse3ds.py</code>). Material names
+inside the 3DS files (<code>SEINA.BMP</code>, <code>DOOM.GIF</code>...)
+are redirected to the PNG of the same stem; <strong>five pairs are
+byte-identical files stored twice</strong> (checked by hash):
+<code>0FLOOR</code>=<code>0REUNA</code>,
+<code>ENVPLANE</code>=<code>MORENV</code>,
+<code>metamap0</code>=<code>MORMAP</code>,
+<code>MEFIS</code>=<code>forcemap</code>,
+<code>Bump</code>=<code>MORBUMP</code>. Indexed PNGs carry their own
+256-entry palette (the engine's texture mappers are paletted, section
+2); the 24-bit ones are the 320x200 photographs and
+<code>Orionmos</code>, <code>RUOHO</code>, <code>RAKO</code>. "Colours
+used" below is the number of distinct colours actually present.</p>
+<h3
+id="pictures-24-bit-320x200-full-screen-photographs-15-files">Pictures
+(24-bit, 320x200: full-screen photographs, 15 files)</h3>
+<p><code>ABBA</code> (40913 colours), <code>Abba41-2</code> (39563),
+<code>abba45</code> (23721), <code>FOLIO</code> (21847),
+<code>LAVALLA1..4</code> (17745 / 52900 / 16050 / 42490),
+<code>keltanai</code> (14068), <code>LASIT</code> (38934),
+<code>metanain</code> (16835), <code>purple</code> (33048),
+<code>raita</code> (11636), <code>skenenp2</code> (17404),
+<code>tokavek</code> (22006); <code>PHOTO</code> and
+<code>youjust</code> are 24-bit files with exactly 256 colours. Eight
+further 320x200 pictures are 8-bit palette PNGs: <code>Roskaa1..7</code>
+(the noise-lines "TV" frames, 196..256 colours) and <code>SOS</code>,
+<code>SOS2</code> (254, 253). <img
+src="figures/art_pictures_320x200.png" alt="pictures" /></p>
+<h3 id="lyric--credit-strips-8-bit-palette-torn-tape-labels">Lyric /
+credit strips (8-bit palette, torn-tape labels)</h3>
+<p>Full-width strips (320 px wide): <code>bytelogo</code> 320x86,
+<code>code</code> 320x135, <code>gone</code> 320x99, <code>gone2</code>
+320x122, <code>hyperven</code> 320x79, <code>itused</code> 320x77,
+<code>iwish</code> 320x72, <code>thelove</code> 320x130,
+<code>whathap</code> 320x90, <code>when</code> 320x108; others:
+<code>beauty</code> 220x57, <code>love</code> 212x96, <code>gfx</code>
+259x82, <code>musa</code> 231x157. Name tags with only 17 colours:
+<code>and</code> 21x24, <code>gurdan</code> 134x27, <code>JATE</code>
+85x24, <code>lebeau</code> 132x25, <code>mike</code> 88x25,
+<code>mistral</code> 157x27, <code>mrsex</code> 134x24,
+<code>yolque</code> 134x26. <img src="figures/art_strips.png"
+alt="strips" /></p>
+<h3 id="textures-environmentbump-maps-sprites">Textures,
+environment/bump maps, sprites</h3>
+<p>Palette PNGs unless noted. 64x64:
+<code>0FLOOR</code>/<code>0REUNA</code> (107 colours),
+<code>0IKKUNA</code> (256), <code>Doom</code> (74), <code>Glow</code>
+(199, flare sprite), <code>laatta</code> (211), <code>PYLVAS</code>
+(191), <code>SEINA</code> (153), <code>SEINA2</code> (232),
+<code>RUOHO</code> (24-bit, 3296). 128x128: <code>6</code>,
+<code>Ball</code>, <code>Ballmid</code>, <code>ENVI2</code>
+(sphere-shaped environment map), <code>HISSI</code>,
+<code>isomap</code>, <code>LATTIA</code>, <code>MARMORI2</code>,
+<code>PLATE</code>. 256x256: <code>blob</code>,
+<code>Bump</code>/<code>MORBUMP</code> (216, swirl bump map),
+<code>ENVGREEN</code>, <code>ENVPLANE</code>/<code>MORENV</code>,
+<code>FIL</code>, <code>FORCEMAO</code>,
+<code>forcemap</code>/<code>MEFIS</code>, <code>holemap0/1</code>,
+<code>KUVIO</code>, <code>metaenv0</code>,
+<code>metamap0</code>/<code>MORMAP</code>, <code>MOYKYENV</code>,
+<code>MOYKYMAP</code>, <code>mulju00a/b</code>, <code>Orionmos</code>
+(24-bit, 6514). Small sprites: <code>Particle</code> 16x16 (31 colours,
+additive spark), <code>RAKO</code> 16x16 (24-bit, 214),
+<code>lens.png</code> 32x32 (<strong>an 8-bit BMP</strong>, 2 colours,
+the lens-flare hexagon; converted to PNG in
+<code>web/assets/img</code>). <img src="figures/art_textures.png"
+alt="textures" /></p>
+<h3 id="3d-meshes-11-files-with-3ds-content">3D meshes (11 files with
+3DS content)</h3>
+<p>Sizes are from the directory; vertex/triangle totals were re-counted
+from the 3DS chunks and agree with the per-file lists in section 4.
+Coordinates are stored Z-up in 3DS space (the engine swaps y/z). The
+wireframe shows every mesh of the file together, as stored (before
+keyframer transforms), one fixed view; materials, lights and cameras are
+listed in the per-file entries above.</p>
+<table>
+<thead>
+<tr>
+<th>file</th>
+<th>offset</th>
+<th>bytes</th>
+<th>vertices</th>
+<th>triangles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0ROOM3.3DS</code></td>
+<td>21184</td>
+<td>73720</td>
+<td>1159</td>
+<td>922</td>
+</tr>
+<tr>
+<td><code>BALL2.3DS</code></td>
+<td>494919</td>
+<td>20712</td>
+<td>390</td>
+<td>768</td>
+</tr>
+<tr>
+<td><code>DMOYKK2.3DS</code></td>
+<td>644956</td>
+<td>77152</td>
+<td>1473</td>
+<td>2942</td>
+</tr>
+<tr>
+<td><code>HALLU.3DS</code></td>
+<td>1086625</td>
+<td>56254</td>
+<td>1087</td>
+<td>1180</td>
+</tr>
+<tr>
+<td><code>META1.3DS</code></td>
+<td>1907642</td>
+<td>3010</td>
+<td>8</td>
+<td>12</td>
+</tr>
+<tr>
+<td><code>MORPH.3DS</code></td>
+<td>2146564</td>
+<td>24509</td>
+<td>492</td>
+<td>972</td>
+</tr>
+<tr>
+<td><code>MORPH2.3DS</code></td>
+<td>2171073</td>
+<td>16881</td>
+<td>390</td>
+<td>768</td>
+</tr>
+<tr>
+<td><code>PIIKIT2.3DS</code></td>
+<td>2535496</td>
+<td>96444</td>
+<td>1832</td>
+<td>3340</td>
+</tr>
+<tr>
+<td><code>SPACE2.3DS</code></td>
+<td>3127549</td>
+<td>48221</td>
+<td>843</td>
+<td>1464</td>
+</tr>
+<tr>
+<td><code>TVFIN.3DS</code></td>
+<td>3263658</td>
+<td>28878</td>
+<td>488</td>
+<td>711</td>
+</tr>
+</tbody>
+</table>
+<p>Two more 3DS files are not loaded: <code>3DS.BAK</code> (offset
+94904, 20713 bytes) and <code>PALLO.PNG</code> (offset 2475371, 14602
+bytes, a 3DS under a PNG name; 260 vertices / 512 triangles per its file
+entry above). <img src="figures/art_meshes_wire.png" alt="meshes" /></p>
+<h3 id="generated-by-code-no-file-in-the-archive">Generated by code (no
+file in the archive)</h3>
+<ul>
+<li><strong>Iso-surface meshes</strong> (metaballs 100.7-114.9 s; the
+172-185.8 s scene): vertices and triangles are produced each frame by
+marching cubes over a Wyvill field (parameters and ball motion in
+section 2 and in the 172 s section; the original's edge/triangle tables
+are in <code>web/assets/mc.json</code>, the recorded ball re-entries in
+<code>web/assets/isoballs.json</code>). <code>META1.3DS</code> is only a
+placeholder node (8 vertices) and a camera.</li>
+<li><strong>Lava-tunnel grid</strong> (30.3-33.8 s): a distortion grid
+with three moving 1/r attractors, bit-exact (README, asm sections 11 and
+49).</li>
+<li><strong>Animated lights, particles, flares</strong>: light-range
+animation of the corridor is sampled from the original
+(<code>re/lightdump.py</code>, <code>web/assets/lightanim.json</code>),
+not in the 3DS; particle initial states are <code>rand()</code>-driven
+in the original and dumped from the emulator for the port
+(<code>pseeds*.json</code>); lens/glow flares use
+<code>lens.png</code>/<code>Glow.png</code>.</li>
+<li><strong>Lookup tables</strong>: the 8-bit mappers' depth/fog tables
+(64 rows x 256, colour -&gt; colour*(1-w)+fog<em>w, w =
+.1+.9</em>row/63, fog (97,43,68), installed at the room's start) are
+dumped in <code>web/assets/fogtab.json</code>; <code>fog.json</code>
+holds the per-frame depth-fade state; the 64 KB shade LUT is described
+in WRITEUP-asm.md.</li>
+</ul>
+<h3 id="complete-directory-of-hyperdat">Complete directory of
+Hyper.dat</h3>
+<table>
+<thead>
+<tr>
+<th>file</th>
+<th>offset</th>
+<th>bytes</th>
+<th>size</th>
+<th>format</th>
+<th>colours used</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0FLOOR.PNG</code></td>
+<td>5008</td>
+<td>5401</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>107</td>
+</tr>
+<tr>
+<td><code>0IKKUNA.PNG</code></td>
+<td>10409</td>
+<td>5374</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>0REUNA.PNG</code></td>
+<td>15783</td>
+<td>5401</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>107</td>
+</tr>
+<tr>
+<td><code>0ROOM3.3DS</code></td>
+<td>21184</td>
+<td>73720</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>3DS.BAK</code></td>
+<td>94904</td>
+<td>20713</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>6.PNG</code></td>
+<td>115617</td>
+<td>13962</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>243</td>
+</tr>
+<tr>
+<td><code>ABBA.PNG</code></td>
+<td>129579</td>
+<td>127027</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>40913</td>
+</tr>
+<tr>
+<td><code>Abba41-2.PNG</code></td>
+<td>256606</td>
+<td>142580</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>39563</td>
+</tr>
+<tr>
+<td><code>abba45.PNG</code></td>
+<td>399186</td>
+<td>80070</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>23721</td>
+</tr>
+<tr>
+<td><code>and.PNG</code></td>
+<td>479256</td>
+<td>1165</td>
+<td>21x24</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>Ball.PNG</code></td>
+<td>480421</td>
+<td>14498</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>253</td>
+</tr>
+<tr>
+<td><code>BALL2.3DS</code></td>
+<td>494919</td>
+<td>20712</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>Ballmid.png</code></td>
+<td>515631</td>
+<td>13627</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>244</td>
+</tr>
+<tr>
+<td><code>beauty.PNG</code></td>
+<td>529258</td>
+<td>3895</td>
+<td>220x57</td>
+<td>PNG 8-bit palette</td>
+<td>243</td>
+</tr>
+<tr>
+<td><code>blob.png</code></td>
+<td>533153</td>
+<td>51611</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>Bump.png</code></td>
+<td>584764</td>
+<td>37743</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>216</td>
+</tr>
+<tr>
+<td><code>bytelogo.PNG</code></td>
+<td>622507</td>
+<td>14200</td>
+<td>320x86</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>code.PNG</code></td>
+<td>636707</td>
+<td>7006</td>
+<td>320x135</td>
+<td>PNG 8-bit palette</td>
+<td>220</td>
+</tr>
+<tr>
+<td><code>data.lst</code></td>
+<td>643713</td>
+<td>1243</td>
+<td></td>
+<td>text list of the 103 other names</td>
+<td></td>
+</tr>
+<tr>
+<td><code>DMOYKK2.3DS</code></td>
+<td>644956</td>
+<td>77152</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>Doom.PNG</code></td>
+<td>722108</td>
+<td>4428</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>74</td>
+</tr>
+<tr>
+<td><code>ENVGREEN.PNG</code></td>
+<td>726536</td>
+<td>40502</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>ENVI2.PNG</code></td>
+<td>767038</td>
+<td>11251</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>255</td>
+</tr>
+<tr>
+<td><code>ENVPLANE.PNG</code></td>
+<td>778289</td>
+<td>32381</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>FIL.PNG</code></td>
+<td>810670</td>
+<td>48545</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>FOLIO.PNG</code></td>
+<td>859215</td>
+<td>87647</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>21847</td>
+</tr>
+<tr>
+<td><code>FORCEMAO.PNG</code></td>
+<td>946862</td>
+<td>46170</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>253</td>
+</tr>
+<tr>
+<td><code>forcemap.png</code></td>
+<td>993032</td>
+<td>50932</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>246</td>
+</tr>
+<tr>
+<td><code>gfx.PNG</code></td>
+<td>1043964</td>
+<td>6157</td>
+<td>259x82</td>
+<td>PNG 8-bit palette</td>
+<td>147</td>
+</tr>
+<tr>
+<td><code>Glow.PNG</code></td>
+<td>1050121</td>
+<td>3637</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>199</td>
+</tr>
+<tr>
+<td><code>gone.png</code></td>
+<td>1053758</td>
+<td>15678</td>
+<td>320x99</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>gone2.PNG</code></td>
+<td>1069436</td>
+<td>15162</td>
+<td>320x122</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>gurdan.PNG</code></td>
+<td>1084598</td>
+<td>2027</td>
+<td>134x27</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>HALLU.3DS</code></td>
+<td>1086625</td>
+<td>56254</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>HISSI.PNG</code></td>
+<td>1142879</td>
+<td>17281</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>holemap0.png</code></td>
+<td>1160160</td>
+<td>34649</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>holemap1.png</code></td>
+<td>1194809</td>
+<td>26028</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>232</td>
+</tr>
+<tr>
+<td><code>hyperven.PNG</code></td>
+<td>1220837</td>
+<td>21768</td>
+<td>320x79</td>
+<td>PNG 8-bit palette</td>
+<td>254</td>
+</tr>
+<tr>
+<td><code>isomap.PNG</code></td>
+<td>1242605</td>
+<td>11295</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>248</td>
+</tr>
+<tr>
+<td><code>itused.PNG</code></td>
+<td>1253900</td>
+<td>12125</td>
+<td>320x77</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>iwish.PNG</code></td>
+<td>1266025</td>
+<td>7428</td>
+<td>320x72</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>JATE.PNG</code></td>
+<td>1273453</td>
+<td>1539</td>
+<td>85x24</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>keltanai.png</code></td>
+<td>1274992</td>
+<td>54715</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>14068</td>
+</tr>
+<tr>
+<td><code>KUVIO.PNG</code></td>
+<td>1329707</td>
+<td>39756</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>laatta.PNG</code></td>
+<td>1369463</td>
+<td>5360</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>211</td>
+</tr>
+<tr>
+<td><code>LASIT.PNG</code></td>
+<td>1374823</td>
+<td>98755</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>38934</td>
+</tr>
+<tr>
+<td><code>LATTIA.PNG</code></td>
+<td>1473578</td>
+<td>18096</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>245</td>
+</tr>
+<tr>
+<td><code>LAVALLA1.PNG</code></td>
+<td>1491674</td>
+<td>56228</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>17745</td>
+</tr>
+<tr>
+<td><code>LAVALLA2.PNG</code></td>
+<td>1547902</td>
+<td>123366</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>52900</td>
+</tr>
+<tr>
+<td><code>LAVALLA3.PNG</code></td>
+<td>1671268</td>
+<td>45911</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>16050</td>
+</tr>
+<tr>
+<td><code>LAVALLA4.PNG</code></td>
+<td>1717179</td>
+<td>112115</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>42490</td>
+</tr>
+<tr>
+<td><code>lebeau.PNG</code></td>
+<td>1829294</td>
+<td>1876</td>
+<td>132x25</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>lens.png</code></td>
+<td>1831170</td>
+<td>2102</td>
+<td>32x32</td>
+<td>BMP 8-bit palette (not PNG)</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>love.PNG</code></td>
+<td>1833272</td>
+<td>5253</td>
+<td>212x96</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>MARMORI2.PNG</code></td>
+<td>1838525</td>
+<td>18185</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>245</td>
+</tr>
+<tr>
+<td><code>MEFIS.PNG</code></td>
+<td>1856710</td>
+<td>50932</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>246</td>
+</tr>
+<tr>
+<td><code>META1.3DS</code></td>
+<td>1907642</td>
+<td>3010</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>metaenv0.png</code></td>
+<td>1910652</td>
+<td>13550</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>metamap0.png</code></td>
+<td>1924202</td>
+<td>49123</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>metanain.png</code></td>
+<td>1973325</td>
+<td>50346</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>16835</td>
+</tr>
+<tr>
+<td><code>mike.PNG</code></td>
+<td>2023671</td>
+<td>1628</td>
+<td>88x25</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>mistral.PNG</code></td>
+<td>2025299</td>
+<td>2018</td>
+<td>157x27</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>MORBUMP.PNG</code></td>
+<td>2027317</td>
+<td>37743</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>216</td>
+</tr>
+<tr>
+<td><code>MORENV.PNG</code></td>
+<td>2065060</td>
+<td>32381</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>MORMAP.PNG</code></td>
+<td>2097441</td>
+<td>49123</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>MORPH.3DS</code></td>
+<td>2146564</td>
+<td>24509</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>MORPH2.3DS</code></td>
+<td>2171073</td>
+<td>16881</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>MOYKYENV.PNG</code></td>
+<td>2187954</td>
+<td>21928</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>MOYKYMAP.PNG</code></td>
+<td>2209882</td>
+<td>50912</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>254</td>
+</tr>
+<tr>
+<td><code>mrsex.PNG</code></td>
+<td>2260794</td>
+<td>1946</td>
+<td>134x24</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>mulju00a.png</code></td>
+<td>2262740</td>
+<td>50483</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>254</td>
+</tr>
+<tr>
+<td><code>mulju00b.png</code></td>
+<td>2313223</td>
+<td>59196</td>
+<td>256x256</td>
+<td>PNG 8-bit palette</td>
+<td>250</td>
+</tr>
+<tr>
+<td><code>musa.PNG</code></td>
+<td>2372419</td>
+<td>7967</td>
+<td>231x157</td>
+<td>PNG 8-bit palette</td>
+<td>55</td>
+</tr>
+<tr>
+<td><code>Orionmos.PNG</code></td>
+<td>2380386</td>
+<td>94985</td>
+<td>256x256</td>
+<td>PNG 24-bit RGB</td>
+<td>6514</td>
+</tr>
+<tr>
+<td><code>PALLO.PNG</code></td>
+<td>2475371</td>
+<td>14602</td>
+<td></td>
+<td>3DS (stored under a .PNG name)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>Particle.png</code></td>
+<td>2489973</td>
+<td>1134</td>
+<td>16x16</td>
+<td>PNG 8-bit palette</td>
+<td>31</td>
+</tr>
+<tr>
+<td><code>PHOTO.PNG</code></td>
+<td>2491107</td>
+<td>44389</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>PIIKIT2.3DS</code></td>
+<td>2535496</td>
+<td>96444</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>PLATE.PNG</code></td>
+<td>2631940</td>
+<td>13744</td>
+<td>128x128</td>
+<td>PNG 8-bit palette</td>
+<td>220</td>
+</tr>
+<tr>
+<td><code>purple.png</code></td>
+<td>2645684</td>
+<td>97465</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>33048</td>
+</tr>
+<tr>
+<td><code>PYLVAS.PNG</code></td>
+<td>2743149</td>
+<td>5220</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>191</td>
+</tr>
+<tr>
+<td><code>raita.png</code></td>
+<td>2748369</td>
+<td>33825</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>11636</td>
+</tr>
+<tr>
+<td><code>RAKO.PNG</code></td>
+<td>2782194</td>
+<td>650</td>
+<td>16x16</td>
+<td>PNG 24-bit RGB</td>
+<td>214</td>
+</tr>
+<tr>
+<td><code>Roskaa1.PNG</code></td>
+<td>2782844</td>
+<td>36120</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>197</td>
+</tr>
+<tr>
+<td><code>Roskaa2.PNG</code></td>
+<td>2818964</td>
+<td>42067</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>ROSKAA3.PNG</code></td>
+<td>2861031</td>
+<td>32982</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>ROSKAA4.PNG</code></td>
+<td>2894013</td>
+<td>30863</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>ROSKAA5.PNG</code></td>
+<td>2924876</td>
+<td>30366</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>ROSKAA6.PNG</code></td>
+<td>2955242</td>
+<td>35869</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>196</td>
+</tr>
+<tr>
+<td><code>ROSKAA7.PNG</code></td>
+<td>2991111</td>
+<td>33640</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>RUOHO.PNG</code></td>
+<td>3024751</td>
+<td>7921</td>
+<td>64x64</td>
+<td>PNG 24-bit RGB</td>
+<td>3296</td>
+</tr>
+<tr>
+<td><code>SEINA.PNG</code></td>
+<td>3032672</td>
+<td>5183</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>153</td>
+</tr>
+<tr>
+<td><code>SEINA2.PNG</code></td>
+<td>3037855</td>
+<td>5377</td>
+<td>64x64</td>
+<td>PNG 8-bit palette</td>
+<td>232</td>
+</tr>
+<tr>
+<td><code>skenenp2.PNG</code></td>
+<td>3043232</td>
+<td>64742</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>17404</td>
+</tr>
+<tr>
+<td><code>SOS.PNG</code></td>
+<td>3107974</td>
+<td>9459</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>254</td>
+</tr>
+<tr>
+<td><code>SOS2.PNG</code></td>
+<td>3117433</td>
+<td>10116</td>
+<td>320x200</td>
+<td>PNG 8-bit palette</td>
+<td>253</td>
+</tr>
+<tr>
+<td><code>SPACE2.3DS</code></td>
+<td>3127549</td>
+<td>48221</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>thelove.PNG</code></td>
+<td>3175770</td>
+<td>15716</td>
+<td>320x130</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>tokavek.PNG</code></td>
+<td>3191486</td>
+<td>72172</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>22006</td>
+</tr>
+<tr>
+<td><code>TVFIN.3DS</code></td>
+<td>3263658</td>
+<td>28878</td>
+<td></td>
+<td>3DS (R3/R4)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>whathap.PNG</code></td>
+<td>3292536</td>
+<td>8732</td>
+<td>320x90</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>when.PNG</code></td>
+<td>3301268</td>
+<td>14288</td>
+<td>320x108</td>
+<td>PNG 8-bit palette</td>
+<td>256</td>
+</tr>
+<tr>
+<td><code>yolque.PNG</code></td>
+<td>3315556</td>
+<td>1878</td>
+<td>134x26</td>
+<td>PNG 8-bit palette</td>
+<td>17</td>
+</tr>
+<tr>
+<td><code>youjust.PNG</code></td>
+<td>3317434</td>
+<td>24713</td>
+<td>320x200</td>
+<td>PNG 24-bit RGB</td>
+<td>256</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-port-vs-original">6. Port vs original</h2>
+<p><code>shots/contact_original.png</code> (frames of the original
+running under emulation, every 5 s) and
+<code>shots/contact_port.png</code> (the port) and the side-by-side
+<code>shots/compare_all.png</code> (left = port, right = original).
+Honest numbers: mean absolute error <strong>50.9 / 255</strong> over
+those 37 frames: the structure (scene order, timing, sprites, camera
+paths, objects) matches; the lighting, particle looks and several
+scene-specific effects (tunnel, metaballs, flesh tube) are only
+approximations.</p>
+<h3 id="halftone-scene-1369-1398-s---fully-reversed">Halftone scene
+(136.9-139.8 s) - fully reversed</h3>
+<p>Two 41x26 vertex layers (<code>mefis</code>, <code>forcemao</code>)
+mixed per 8x8 block through a growing/shrinking disc mask: the dotted
+look. Formulas and the single-precision-chop x87 finding are in
+WRITEUP-asm.md section 17; the background matches the emulator
+exactly.</p>
+<h3 id="swirl-scene-1329-1369-s---fully-reversed">Swirl scene
+(132.9-136.9 s) - fully reversed</h3>
+<p>A 41x26 distortion grid (code 0x21c24) rendered twice (textures
+<code>mulju00a</code> and <code>mulju00b</code>, indices + palettes
+straight from the PNGs) and blended through shade tables: see asm
+section 15. The port reproduces the original's integer pipeline (grid in
+16.16&lt;&lt;8, 8x8 cell interpolation, row tables) and matches the
+emulator's final 32-bit buffer exactly. The other sub-scenes of
+128.6-143.8 s are <em>different code</em>: 136.9-139.8 is the scene
+initialised at 0x25c9c (render 0x25d80, textures <code>forcemao</code> +
+<code>mefis</code>), 139.8-143.7 is the morph2 object with the
+4-attractor grid (0x25ac8/0x25738), 128.6-132.7 starts at 0x25060; those
+are still the old approximation.</p>
+</body>
+</html>

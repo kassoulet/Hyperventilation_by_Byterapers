@@ -36,3 +36,11 @@ Known gaps: no text-mode menu, timing of lyric strip animation, exact particle c
 ## Pitfalls found while emulating (useful if you redo it)
 Watcom's `sbrk` uses `lsl` on DS as the initial break and refuses a break below the initial ESP; the DOS-memory pool for DPMI 0x100 must not overlap the image at 0x1b000-0x70000 (it silently overwrote
 code at 0x20010 and crashed the run at 115 s); `__InitRtns` flags are already set in a dump taken after start-up (static constructors, e.g. `cout`, would be skipped).
+
+## Write-ups on the site
+
+The write-ups are published as HTML next to the player (`web/writeups/`, generated from `WRITEUP-*.md` and the referenced `figures/`; needs pandoc). After editing a write-up, regenerate with:
+
+```
+../tools/mkwriteups.sh . web    # shared script: demoports/tools/mkwriteups.sh REPO_DIR PUBLISH_SUBDIR
+```
